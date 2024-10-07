@@ -6,17 +6,17 @@ import librosa
 import numpy as np
 import torchaudio
 
-def remove_splits(y, splits):
-    y = np.concatenate([y[x[0]:x[1]] for x in splits])
-    return y
+# def remove_splits(y, splits):
+#     y = np.concatenate([y[x[0]:x[1]] for x in splits])
+#     return y
 
 
-def remove_silence(y, top_db=60, frame_length=1024, hop_length=512, return_splits=False):
-    splits = librosa.effects.split(y, top_db=top_db, frame_length=frame_length, hop_length=hop_length)
-    y = remove_splits(y, splits)
-    if return_splits:
-        return y, splits
-    return y
+# def remove_silence(y, top_db=60, frame_length=1024, hop_length=512, return_splits=False):
+#     splits = librosa.effects.split(y, top_db=top_db, frame_length=frame_length, hop_length=hop_length)
+#     y = remove_splits(y, splits)
+#     if return_splits:
+#         return y, splits
+#     return y
 
 
 class DataProvider(object):
@@ -55,9 +55,9 @@ class RawAudioProvider(DataProvider):
     def initialize_mix(self):
 
         wav, sr = torchaudio.load(self._audio_path)
-        channel = 1 - 1
+        channel = 0
         wav = wav[channel, :]
-        if sr != 16000:  # Whisper expects 16kHz audio
+        if sr != 16000:  
             wav = torchaudio.functional.resample(wav, sr, 16000)
         wav = wav.view(-1)
         feat_len = int(wav.size(0) // 320)

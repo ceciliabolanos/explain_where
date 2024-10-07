@@ -29,3 +29,15 @@ python3 train/train.py \
     --device cuda \
     --out_n_neurons 4 \
     --hidden_size 128 \
+
+
+python train/train.py \
+	hparams/whisper-large-v3_freeze.yaml \
+	--output_folder /home/cbolanos/experiments/iemocap_whisper/fold_2 \
+    --train_annotation /home/cbolanos/explain_where/data/iemocap/fold_2/iemocap_train_fold_2.json \
+    --valid_annotation /home/cbolanos/explain_where/data/iemocap/fold_2/iemocap_valid_fold_2.json \
+    --test_annotation /home/cbolanos/explain_where/data/iemocap/fold_2/iemocap_test_fold_2.json  \
+    --feat_dir /home/cbolanos/experiments/features_whisper \
+    --label_map /home/cbolanos/explain_where/data/iemocap/label_map.json \
+    --device cuda \
+    data

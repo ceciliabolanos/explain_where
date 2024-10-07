@@ -74,6 +74,7 @@ class LimeBase(object):
     def feature_selection(self, data, labels, weights, num_features, method):
         """Selects features for the model. see explain_instance_with_data to
            understand the parameters."""
+
         if method == 'none':
             return np.array(range(data.shape[1]))
         elif method == 'forward_selection':

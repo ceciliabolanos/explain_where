@@ -2,6 +2,8 @@
 Functions for explaining classifiers that use Image data.
 """
 from functools import partial
+from itertools import combinations
+import math
 
 import numpy as np
 import sklearn
@@ -34,7 +36,7 @@ class AudioExplanation(object):
             raise ValueError('positive_components, negative_components or both must be True')
 
         exp = self.local_exp[label]
-
+        print(f'this is the label {label}')
         w = [[x[0], x[1], x[2]] for x in exp]
         used_features, weights, pvals = np.array(w, dtype=int)[:, 0], np.array(w)[:, 1], np.array(w)[:, 2]
 
@@ -69,8 +71,23 @@ class AudioExplanation(object):
         if return_indeces:
             return components, used_features
         return components
+    
 
+    def get_components_with_stats(self, label, positive_components=True, negative_components=True, num_components='auto',
+                              thresh=1e-8, min_abs_weight=0.0):
+        # First, get the components and indices using the original function
+        if label not in self.local_exp:
+            raise KeyError('Label not in explanation')
+        if positive_components is False and negative_components is False:
+            raise ValueError('positive_components, negative_components or both must be True')
 
+        exp = self.local_exp[label]
+        print(f'this is the label {label}')
+        w = [[x[0], x[1], x[2]] for x in exp]
+        used_features, weights, pvals = np.array(w, dtype=int)[:, 0], np.array(w)[:, 1], np.array(w)[:, 2]
+
+        return used_features, weights, pvals
+    
 class LimeAudioExplainer(object):
     """Explains predictions on audio data."""
 
@@ -190,15 +207,15 @@ class LimeAudioExplainer(object):
                     data, labels, distances, label, num_features,
                     model_regressor=model_regressor,
                     feature_selection=self.feature_selection)
-        else:
-            for target in range(num_reg_targets):
-                (ret_exp.intercept[target],
-                 ret_exp.local_exp[target],
-                 ret_exp.score,
-                 ret_exp.distance[target]) = self.base.explain_instance_with_data(
-                    data, labels, distances, target, num_features,
-                    model_regressor=model_regressor,
-                    feature_selection=self.feature_selection)
+        # else:
+        #     for target in range(num_reg_targets):
+        #         (ret_exp.intercept[target],
+        #          ret_exp.local_exp[target],
+        #          ret_exp.score,
+        #          ret_exp.distance[target]) = self.base.explain_instance_with_data(
+        #             data, labels, distances, target, num_features,
+        #             model_regressor=model_regressor,
+        #             feature_selection=self.feature_selection)
         return ret_exp
 
     def data_labels(self,
@@ -220,14 +237,11 @@ class LimeAudioExplainer(object):
         """
         n_features = self.factorization.get_number_components()
         if num_samples == 'exhaustive':
-            import itertools
-            num_samples = 2**n_features
-            data = np.array(list(map(list, itertools.product([1, 0], repeat=n_features))))
+            data = self.generate_specific_zero_combinations(n_features)
+            num_samples = len(data)
         else:
-            data = self.random_state.randint(0, 2, num_samples * n_features) \
-                .reshape((num_samples, n_features))
-            data[0, :] = 1  # first row all is set to 1
-
+            data = self.generate_random_masked_data(num_samples, n_features)
+        print(f'number of components {n_features} generated tantos instancias {len(data)}')
         labels = []
         audios = []
         for row in data:
@@ -246,3 +260,28 @@ class LimeAudioExplainer(object):
             preds = predict_fn(np.array(audios))
             labels.extend(preds)
         return data, np.array(labels)
+
+    def generate_specific_zero_combinations(self, n_components):
+        all_combinations = [np.ones(n_components, dtype=int)]  # Start with all-ones array
+        max_zeros = math.ceil(n_components * 0.30)  # 30% redondeado hacia arriba
+        
+        for num_zeros in range(1, max_zeros + 1):
+            zero_positions = list(combinations(range(n_components), num_zeros))
+            
+            for positions in zero_positions:
+                if len(all_combinations) >= 10000:  # Check if we've reached 10,000 samples
+                    return  np.array(all_combinations)
+                
+                arr = np.ones(n_components, dtype=int)
+                arr[list(positions)] = 0
+                all_combinations.append(arr)
+        
+        return np.array(all_combinations)
+
+    def generate_random_masked_data(self, num_samples, n_features):
+        data = np.ones((num_samples, n_features), dtype=int)
+        
+        for i in range(1, num_samples):  # Start from second row
+            num_zeros = self.random_state.choice([1, 2, 3])
+            zero_indices = self.random_state.choice(n_features, num_zeros, replace=False)
+            data[i, zero_indices] = 0

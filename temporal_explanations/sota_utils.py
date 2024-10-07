@@ -43,8 +43,6 @@ class CustomWhisperForAudioClassification(nn.Module):
             hidden_states = hidden_states[:,:feat_len,:].data.cpu().numpy()
             # hidden_states = hidden_states[0]
             hidden_states = torch.from_numpy(hidden_states).to('cuda')
-            print(f"Input feature shape: {input_features.shape}")
-            print(f"Hidden states shape: {hidden_states.shape}")
             logits = self.classifier(hidden_states, padding_mask=None)
             
 
@@ -53,8 +51,6 @@ class CustomWhisperForAudioClassification(nn.Module):
 
 
 
-
-# sota config
 def prepare_config(num_classes=4, hidden_size=128, model_path='', feat_len=''):
     config = Namespace()
     config.num_classes = num_classes

@@ -1,20 +1,5 @@
 import numpy as np
 import warnings
-import os
-import librosa
-from audioLIME.data_provider import RawAudioProvider
-
-try:
-    import torch
-    import torch.nn.functional as F
-except ImportError:
-    torch = None
-
-try:
-    import yaml
-except ImportError:
-    yaml = None
-
 
 def default_composition_fn(x):
     return x
@@ -118,64 +103,54 @@ class DataBasedFactorization(Factorization):
         self.prepare_components(start_sample, y_length)
 
 
-# class SpleeterFactorization(DataBasedFactorization):
-#     def __init__(self, data_provider, n_temporal_segments, composition_fn, model_name, target_sr=16000):
-#         assert isinstance(data_provider, RawAudioProvider)  # TODO: nicer check
-#         self.model_name = model_name
-#         self.target_sr = target_sr
-#         super().__init__(data_provider, n_temporal_segments, composition_fn)
-
-#     def initialize_components(self):
-#         spleeter_sr = 41000
-
-#         if Separator is None:
-#             raise ImportError('spleeter is not imported')
-
-#         separator = Separator(self.model_name, multiprocess=False)
-
-#         # Perform the separation:
-#         waveform = self.data_provider.get_mix()
-#         waveform = np.expand_dims(waveform, axis=0)
-#         waveform = librosa.resample(waveform, self.target_sr, spleeter_sr)
-#         waveform = np.swapaxes(waveform, 0, 1)
-#         prediction = separator.separate(waveform)
-
-#         self.original_components = [
-#             librosa.resample(np.mean(prediction[key], axis=1), spleeter_sr, self.target_sr) for
-#             key in prediction]
-#         self._components_names = list(prediction.keys())
-
-
-class TemporalSegmentationFactorization(DataBasedFactorization):
-    def __init__(self, data_provider, wav, n_temporal_segments, sr=16000, composition_fn=None):
+class TemporalSegmentationFactorization(Factorization):
+    def __init__(self, data_provider, wav, segment_duration, window_duration, sr=16000, composition_fn=None):
+        super().__init__()
         if composition_fn is None:
             composition_fn = default_composition_fn
         self.data_provider = data_provider
         self.wav_array = wav
         self.composition_fn = composition_fn
-        self.n_temporal_segments = n_temporal_segments
+        self.segment_duration_ms = segment_duration
+        self.window_duration_ms = window_duration
         self.sr = sr
-        self.initialize_components()
-
-    def initialize_components(self):
-        # Calculate the length of each segment
-        segment_length = len(self.wav_array) // self.n_temporal_segments
-        
-        # Create temporal segments
         self.components = []
-        self.component_names = []
-        for i in range(self.n_temporal_segments):
-            start = i * segment_length
-            end = start + segment_length if i < self.n_temporal_segments - 1 else len(self.wav_array)
+        self._components_names = []
+        self.initialize_components()
+    
+    def initialize_components(self):
+        # Calculate the number of samples per segment and window
+        samples_per_segment = int(self.segment_duration_ms * self.sr / 1000)
+        
+        # Calculate the total number of samples and segments
+        total_samples = len(self.wav_array)
+        n_segments = total_samples // samples_per_segment
+
+        # Create temporal segments with sliding window
+        for i in range(n_segments):
+            start = i * samples_per_segment
+            end = start + samples_per_segment
             
-            # Create a zero-filled array of the full audio length
             segment = np.zeros_like(self.wav_array)
-            # Fill only the relevant part with the audio data
             segment[start:end] = self.wav_array[start:end]
             
             self.components.append(segment)
-            self.component_names.append(f"Segment_{i+1}")
+            start_time_ms = i * self.window_duration_ms
+            end_time_ms = start_time_ms + self.segment_duration_ms
+            self._components_names.append(f"Segment_{start_time_ms:.0f}ms_to_{end_time_ms:.0f}ms")
 
+        if end < total_samples:
+            start = end
+            end = total_samples
+            
+            segment = np.zeros_like(self.wav_array)
+            segment[start:end] = self.wav_array[start:end]
+            
+            self.components.append(segment)
+            start_time_ms = (n_segments) * self.window_duration_ms
+            end_time_ms = start_time_ms + ((end - start) / self.sr * 1000)
+            self._components_names.append(f"Segment_{start_time_ms:.0f}ms_to_{end_time_ms:.0f}ms")
+    
     def get_number_components(self):
         return len(self.components)
 
@@ -183,3 +158,16 @@ class TemporalSegmentationFactorization(DataBasedFactorization):
         # This method is simplified as we're working with pre-segmented data
         # You might want to adjust this if you need to change the analysis window dynamically
         pass
+
+    def retrieve_components(self, selection_order=None):
+        if selection_order is None:
+            return self.components
+        return [self.components[o] for o in selection_order]
+    
+    def compose_model_input(self, components=None):
+        sel_sources = self.retrieve_components(selection_order=components)
+        if len(sel_sources) > 1:
+            y = sum(sel_sources)
+        else:
+            y = sel_sources[0]
+        return self.composition_fn(y)
