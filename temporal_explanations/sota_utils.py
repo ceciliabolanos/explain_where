@@ -51,7 +51,7 @@ class CustomWhisperForAudioClassification(nn.Module):
 
 
 
-def prepare_config(num_classes=4, hidden_size=128, model_path='', feat_len=''):
+def prepare_config(num_classes=4, hidden_size=256, model_path='', feat_len=''):
     config = Namespace()
     config.num_classes = num_classes
     config.hidden_size = hidden_size

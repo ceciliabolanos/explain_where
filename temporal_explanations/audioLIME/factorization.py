@@ -135,9 +135,6 @@ class TemporalSegmentationFactorization(Factorization):
             segment[start:end] = self.wav_array[start:end]
             
             self.components.append(segment)
-            start_time_ms = i * self.window_duration_ms
-            end_time_ms = start_time_ms + self.segment_duration_ms
-            self._components_names.append(f"Segment_{start_time_ms:.0f}ms_to_{end_time_ms:.0f}ms")
 
         if end < total_samples:
             start = end
@@ -147,9 +144,7 @@ class TemporalSegmentationFactorization(Factorization):
             segment[start:end] = self.wav_array[start:end]
             
             self.components.append(segment)
-            start_time_ms = (n_segments) * self.window_duration_ms
-            end_time_ms = start_time_ms + ((end - start) / self.sr * 1000)
-            self._components_names.append(f"Segment_{start_time_ms:.0f}ms_to_{end_time_ms:.0f}ms")
+            
     
     def get_number_components(self):
         return len(self.components)

@@ -5,9 +5,6 @@ import soundfile as sf
 import os
 
 from sota_utils import prepare_config, get_predict_fn
-
-import os
-import soundfile as sf
 import json
     
 def process_file(wav_path, emo):
@@ -25,6 +22,7 @@ def process_file(wav_path, emo):
                                              batch_size=32
                                             )
     label = list(explanation.local_exp.keys())[0]
+    
     top_components, component_indeces = explanation.get_sorted_components(label,
                                                                           positive_components=True,
                                                                           negative_components=False,
@@ -41,7 +39,9 @@ def process_file(wav_path, emo):
     data_to_save = {
         'weights': weights.tolist(),
         'pvals': pvals.tolist(),
-        'used_features': used_features.tolist()
+        'used_features': used_features.tolist(),
+        'prediction_lime': float(explanation.local_pred[0]),
+        'prediction_real': float(explanation.neighborhood_labels[0, label])
     }
     
     # Save as a JSON file
@@ -55,15 +55,17 @@ def process_file(wav_path, emo):
 if __name__ == '__main__':
     # List of files to process
     files_to_process = [
-        {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro05/Ses02M_impro05_F005.wav", "emo": "neu"},
-        {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro08/Ses02M_impro08_F010.wav", "emo": "neu"},
-        {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro02/Ses02M_impro02_F004.wav", "emo": "sad"},
-        {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro02/Ses02M_impro02_M001.wav", "emo": "sad"},
-        {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro01/Ses02M_impro01_M007.wav", "emo": "ang"},
-        {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02F_impro05/Ses02F_impro05_F006.wav", "emo": "ang"},
-        {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02F_impro07/Ses02F_impro07_M005.wav", "emo": "exc"},
-        {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro07/Ses02M_impro07_F007.wav", "emo": "exc"},
-        {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro03/Ses02M_impro03_M010.wav", "emo": "hap"}
+        # {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro05/Ses02M_impro05_F005.wav", "emo": "neu"},
+        # {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro08/Ses02M_impro08_F010.wav", "emo": "neu"},
+        # {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro02/Ses02M_impro02_F004.wav", "emo": "sad"},
+        # {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro02/Ses02M_impro02_M001.wav", "emo": "sad"},
+        # {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro01/Ses02M_impro01_M007.wav", "emo": "ang"},
+        # {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02F_impro05/Ses02F_impro05_F006.wav", "emo": "ang"},
+        # {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02F_impro07/Ses02F_impro07_M005.wav", "emo": "exc"},
+        # {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro07/Ses02M_impro07_F007.wav", "emo": "exc"},
+        # {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02M_impro03/Ses02M_impro03_M010.wav", "emo": "hap"}
+         {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02F_script01_1/Ses02F_script01_1_M013.wav", "emo": "ang"}
+
     ]
 
     # Create output directory if it doesn't exist

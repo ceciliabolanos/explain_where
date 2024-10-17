@@ -207,15 +207,6 @@ class LimeAudioExplainer(object):
                     data, labels, distances, label, num_features,
                     model_regressor=model_regressor,
                     feature_selection=self.feature_selection)
-        # else:
-        #     for target in range(num_reg_targets):
-        #         (ret_exp.intercept[target],
-        #          ret_exp.local_exp[target],
-        #          ret_exp.score,
-        #          ret_exp.distance[target]) = self.base.explain_instance_with_data(
-        #             data, labels, distances, target, num_features,
-        #             model_regressor=model_regressor,
-        #             feature_selection=self.feature_selection)
         return ret_exp
 
     def data_labels(self,
