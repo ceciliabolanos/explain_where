@@ -5,6 +5,7 @@ from functools import partial
 from itertools import combinations
 import math
 
+import os
 import numpy as np
 import sklearn
 import sklearn.preprocessing
@@ -186,7 +187,16 @@ class LimeAudioExplainer(object):
 
         data, labels = self.data_labels(predict_fn, num_samples,
                                         batch_size=batch_size)
+        output_dir = f"/home/cbolanos/experiments/emotion/Ses02F_script01_1_M013.wav"
+        os.makedirs(output_dir, exist_ok=True)
 
+        # Assuming 'data' is the matrix to save
+        csv_path = os.path.join(output_dir, "data.csv")
+        np.savetxt(csv_path, data, delimiter=",", fmt="%s")
+
+        # If you also want to save labels:
+        labels_path = os.path.join(output_dir, "labels.csv")
+        np.savetxt(labels_path, labels, delimiter=",", fmt="%s")
         distances = sklearn.metrics.pairwise_distances(
             data,
             data[0].reshape(1, -1),

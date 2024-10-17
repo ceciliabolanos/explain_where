@@ -30,6 +30,7 @@ def process_file(wav_path, emo):
                                                                           return_indeces=True)
     
     used_features, weights, pvals = explanation.get_components_with_stats(label)
+
     print(f'File: {wav_path}')
     print(f'Emotion: {emo}')
     print(f'Predicted label: {label}')
@@ -43,14 +44,16 @@ def process_file(wav_path, emo):
         'prediction_lime': float(explanation.local_pred[0]),
         'prediction_real': float(explanation.neighborhood_labels[0, label])
     }
-    
-    # Save as a JSON file
-    output_path = os.path.join("output", f"{output_file}_stats.json")
-    with open(output_path, 'w') as json_file:
+
+    output_dir = f"/home/cbolanos/experiments/emotion/{output_file}"
+    os.makedirs(output_dir, exist_ok=True)
+
+    with open(os.path.join(output_dir, "stats.json"), 'w') as json_file:
         json.dump(data_to_save, json_file, indent=4)
-    
-    sf.write(os.path.join("output", f"explanation_{emo}_{output_file}"), sum(top_components), 16000)
-    sf.write(os.path.join("output", f"real_{emo}_{output_file}"), wav, 16000)
+
+
+    sf.write(os.path.join(output_dir, f"explanation_{emo}.wav"), sum(top_components), 16000)
+    sf.write(os.path.join(output_dir, f"real_{emo}.wav"), wav, 16000)
 
 if __name__ == '__main__':
     # List of files to process
@@ -67,9 +70,6 @@ if __name__ == '__main__':
          {"wav": "/home/cbolanos/data/2018_IEMOCAP/Session2/sentences/wav/Ses02F_script01_1/Ses02F_script01_1_M013.wav", "emo": "ang"}
 
     ]
-
-    # Create output directory if it doesn't exist
-    os.makedirs("output", exist_ok=True)
 
     # Process each file
     for file_info in files_to_process:
