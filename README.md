@@ -1,43 +1,19 @@
-# setup the environment
-cd examples/sb
-conda create -n conda-env -f environment.yml
-conda activate conda-env
-
-# extract features
-python3 speech_feature_extraction.py \
-	--model_name wav2vec2-base \
-	--model_path pretrained_models/wav2vec2-base \
-	--dump_dir dump \
-	--device cuda \
-	--data data/iemocap/iemocap.json \
-	--output_norm
-
-# run training & evaluation
-
-python3 train/train.py \
-	hparams/whisper-large-v3_freeze.yaml \
-	--output_folder /home/cbolanos/experiments/iemocap_whisper/fold_2 \
-    --seed 1234 \
-    --batch_size 32 \
-    --lr 1e-4 \
-    --train_annotation data/iemocap/fold_2/iemocap_train_fold_2.json \
-    --valid_annotation data/iemocap/fold_2/iemocap_valid_fold_2.json \
-    --test_annotation data/iemocap/fold_2/iemocap_test_fold_2.json  \
-    --number_of_epochs 100 \
-    --feat_dir /home/cbolanos/experiments/features_whisper \
-    --label_map data/iemocap/label_map.json \
-    --device cuda \
-    --out_n_neurons 4 \
-    --hidden_size 128 \
+Escribamos lo que estamos haciendo: 
 
 
-python train/train.py \
-	hparams/whisper-large-v3_freeze.yaml \
-	--output_folder /home/cbolanos/experiments/iemocap_whisper/fold_2 \
-    --train_annotation /home/cbolanos/explain_where/data/iemocap/fold_2/iemocap_train_fold_2.json \
-    --valid_annotation /home/cbolanos/explain_where/data/iemocap/fold_2/iemocap_valid_fold_2.json \
-    --test_annotation /home/cbolanos/explain_where/data/iemocap/fold_2/iemocap_test_fold_2.json  \
-    --feat_dir /home/cbolanos/experiments/features_whisper \
-    --label_map /home/cbolanos/explain_where/data/iemocap/label_map.json \
-    --device cuda \
-    data
+Estamos buscando explicar el por qué se predijo una determinada clase. Ese por qué, en nuestro caso, será encontrar los segmentos más importantes para la predicción de la clase.
+Nuestra intuición nos dice que en el segmento más importante es donde deberia estar la clase predicha.
+
+Para esto consideramos diferentes métodos para ordenar la importancia de cada segmento en la predicción final.
+
+Para todos tomamos ventanas cada 100ms de tamaño 500ms.
+
+1) Naive: Se considera la importancia de cada ventana como la diferencia entre el score real del audio vs el score al enmascarar (con 0s) esa ventana.
+
+2) RandomForest: Se generan perturbaciones del audio de cantidad num_samples. Cada ventana puede estar o ser enmascarada. Luego se entrena un random forest con los features 1s y 0s (si se enmascaró o no) y 
+el y es el score predicho para la clase para el audio perturbado. La importancia de cada feature (cada segmento) es la dada por el método feature_importance de RF.
+
+3) Linear regression: Se generan perturbaciones del audio de cantidad num_samples. Cada ventana puede estar o ser enmascarada. Luego se entrena una regresión lineal con los features 1s y 0s (si se enmascaró o no) y 
+el y es el score predicho para la clase para el audio perturbado. La importancia de cada feature (cada segmento) es el coeficiente que lo acompaña en la regresión.
+
+

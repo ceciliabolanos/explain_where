@@ -8,6 +8,31 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.animation import FuncAnimation, writers
 import scipy.io.wavfile as wav
 import json
+import torch
+
+def predict_fn(wav_array, model, feature_extractor):
+    if not isinstance(wav_array, list):
+        wav_array = [wav_array]
+    
+    inputs_list = [feature_extractor(audio, sampling_rate=16000, return_tensors="pt") for audio in wav_array]
+    
+    # Combine the processed features
+    inputs = {
+        k: torch.cat([inp[k] for inp in inputs_list]).to('cuda')
+        for k in inputs_list[0].keys()
+    }
+    with torch.no_grad():
+        logits = model(**inputs).logits
+        
+    return logits.cpu().tolist() 
+
+
+def open_json(file_path):
+    """
+    Open and read a JSON file
+    """
+    with open(file_path, 'r') as f:
+        return json.load(f)['real_scores'][0]
 
 
 def process_importance_values(values):
@@ -30,6 +55,7 @@ def process_importance_values(values):
         i+=1
     tiempos = np.linspace(0, (len(nuevos)-1) * 0.1, len(nuevos))
     return  np.array(nuevos), np.array(tiempos)
+
 
 def read_and_process_importance_scores(file_path):
     """

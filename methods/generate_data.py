@@ -10,11 +10,6 @@ SEED = 42
 np.random.seed(SEED)
 random.seed(SEED)
 
-SampleSize = 10
-SegmentLength = 8000
-Overlap = 1600
-SNR = [20, 25, 30]
-
 class DataGenerator:
     def __init__(self, wav, mode='naive_masked_zeros', segment_length=500, overlap=100, num_samples=10, predict_fn=None, sr=16000):
         self.mode = mode
@@ -219,7 +214,7 @@ class DataGenerator:
         n_components = len(self.segment_signal(self.wav))
         print(n_components)
         snrs = self.generate_specific_combinations(n_components=n_components)
-        scores, neighborhood = self.get_scores_neigh(batch_size=32, snrs=snrs)
+        scores, neighborhood = self.get_scores_neigh(batch_size=512, snrs=snrs)
         return scores, snrs, neighborhood
     
     def create_masked_wav(self, row):
