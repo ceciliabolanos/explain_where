@@ -114,7 +114,7 @@ def main():
     THRESHOLD = 0.0
     SEGMENT_LENGTH = 500
     OVERLAP = 400
-    NUM_SAMPLES = 1000
+    NUM_SAMPLES = 7000
 
     # Setup logging
     setup_logging()
