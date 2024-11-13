@@ -15,7 +15,6 @@ class RandomForest:
         self.path = path
         self.filename = filename
 
-
     def train_model(self, label_to_explain):
         with open(self.path, 'r') as file:
             data = json.load(file)

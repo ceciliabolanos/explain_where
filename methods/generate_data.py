@@ -129,6 +129,12 @@ class DataGenerator:
             end = start + L
             if end <= len(S):
                 W.append(S[start:end])
+
+        last_start = len(W) * (L - O)
+        if last_start < len(S):
+            last_segment = S[last_start:]
+            W.append(last_segment)
+                
         return W
 
 
@@ -212,32 +218,29 @@ class DataGenerator:
 
     def _generate_all_masked(self):
         n_components = len(self.segment_signal(self.wav))
-        print(n_components)
         snrs = self.generate_specific_combinations(n_components=n_components)
-        scores, neighborhood = self.get_scores_neigh(batch_size=512, snrs=snrs)
+        scores, neighborhood = self.get_scores_neigh(batch_size=400, snrs=snrs)
         return scores, snrs, neighborhood
     
     def create_masked_wav(self, row):
         W = self.segment_signal(self.wav)
         L = int((self.segment_length/1000) * self.sr)
-        O = int(( self.overlap/1000) * self.sr)
+        O = int((self.overlap/1000) * self.sr)
+
         step = L - O
         output = np.zeros(len(self.wav))
-        weight = np.zeros(len(self.wav))
-        
-        # Add each selected segment
+
         for i, (segment, use) in enumerate(zip(W, row)):
             if use:
                 start = i * step
-                end = start + L
-                output[start:end] += segment
-                weight[start:end] += 1
-
-
-        # Average overlapping parts
-        weight[weight == 0] = 1  # Avoid division by zero
-        output = output / weight
-        
+                if i == len(W) - 1:
+                    # Get the remaining length
+                    remaining_length = len(output) - start
+                    # Copy only up to the remaining length
+                    output[start:start+remaining_length] = segment[:remaining_length]
+                else:
+                    # Normal case - copy the whole segment
+                    output[start:start+step] = segment[:step]
         return output
 
     def get_scores_neigh(self, batch_size=10, snrs=None):
@@ -248,8 +251,12 @@ class DataGenerator:
         labels = []
         audios = []
         neighborhood = []
+        j=0
         for row in snrs:
             temp = self.create_masked_wav(row)
+            if j == 0:
+                print(f'are equal: {temp==self.wav}')
+                j=j+1
             audios.append(temp)
             neighborhood.append(euclidean(self.wav, temp))
             if len(audios) == batch_size:
