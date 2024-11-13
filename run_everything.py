@@ -96,6 +96,7 @@ def process_folder(folder, folder_path, df, model, threshold, segment_length, ov
                     markers=time_tuples,
                     segment_length=segment_length,
                     overlap=overlap,
+                    threshold=threshold,
                     num_samples=num_samples,
                     generate_video=False
                 )
