@@ -31,6 +31,7 @@ df_segmented['father_labels'] = df_segmented['label'].apply(
     )
 
 df_segmented = df_segmented[df_segmented['father_labels'].notna()]
+df_segmented['label_duration'] = (df_segmented['end_time_seconds'] - df_segmented['start_time_seconds']) * 1000
 df_segmented.to_csv('/home/cbolanos/experiments/audioset/labels/labels_segments.csv')
 
 
