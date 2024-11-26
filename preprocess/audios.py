@@ -1,3 +1,5 @@
+"""Script to process every audio file for AST o Yamnet model"""
+
 import os
 import json
 import argparse
