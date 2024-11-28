@@ -5,7 +5,7 @@ import pandas as pd
 import json 
 from utils import get_name_id_mappings
 import numpy as np
-from transformers import AutoFeatureExtractor, ASTForAudioClassification
+from transformers import ASTForAudioClassification
 
 def get_label_name(label_id, ontology_data):
     for entry in ontology_data:
@@ -17,10 +17,9 @@ def get_father_label_name(label_id, mappings):
 
 ############# Preprocess to get the audio files we are going to run and the labels we have segmented for each one. #############
 
-df_segmented = pd.read_csv('/home/cbolanos/experiments/audioset/labels/audioset_train_strong.tsv', sep='\t')
+df_segmented = pd.read_csv('/home/cbolanos/experiments/audioset/labels/audioset_eval_strong.tsv', sep='\t')
 df_segmented['base_segment_id'] = df_segmented['segment_id'].apply(lambda x: x.rsplit('_', 1)[0])
 
-feature_extractor = AutoFeatureExtractor.from_pretrained("MIT/ast-finetuned-audioset-10-10-0.4593")
 model = ASTForAudioClassification.from_pretrained("MIT/ast-finetuned-audioset-10-10-0.4593")
 
 with open('/home/cbolanos/experiments/audioset/labels/ontology.json', 'r') as file:
@@ -38,6 +37,7 @@ df_segmented['father_labels'] = df_segmented['label'].apply(
 df_segmented['father_labels_ids'] = df_segmented['father_labels'].apply(
     lambda x: model.config.label2id.get(x, -1)
 ).astype('Int64')
+
 df_segmented = df_segmented[df_segmented['father_labels_ids'] != -1]
 df_segmented = df_segmented[df_segmented['father_labels'].notna()]
 df_segmented['label_duration'] = (df_segmented['end_time_seconds'] - df_segmented['start_time_seconds']) * 1000
