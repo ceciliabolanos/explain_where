@@ -14,23 +14,24 @@ import numpy as np
 def generate_data(filename, 
                   model_name="MIT/ast-finetuned-audioset-10-10-0.4593",
                   segment_length=500,
-                  overlap=400,
-                  num_samples=100):
+                  overlap=250,
+                  num_samples=4500):
     
     feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
     model = ASTForAudioClassification.from_pretrained(model_name)
     model = model.to('cuda')
 
-    audio_path = f'/mnt/data/audioset_24k/unbalanced_train/{filename}.flac'
+    audio_path = f'/mnt/shared/alpha/hdd6T/Datasets/audioset_eval_wav/{filename}.wav'
     
     ############## Load the audio ##############
 
     wav_data, sample_rate = sf.read(audio_path)
-    resampled_audio = resample(wav_data, int(len(wav_data) * 16000 / 24000))
+    if sample_rate != 16000:
+        wav_data = resample(wav_data, int(len(wav_data) * 16000 / sample_rate))
 
     # Convert stereo to mono if necessary
-    if len(resampled_audio.shape) > 1 and resampled_audio.shape[1] == 2:
-        resampled_audio = resampled_audio.mean(axis=1)
+    if len(wav_data.shape) > 1 and wav_data.shape[1] == 2:
+        wav_data = wav_data.mean(axis=1)
 
     ############## Define prediction function ##############
     def predict_fn(wav_array):
@@ -52,7 +53,7 @@ def generate_data(filename,
 
     ############## Generate data ##############
     data_generator = DataGenerator(
-        resampled_audio,
+        wav_data,
         segment_length=segment_length,
         overlap=overlap,
         num_samples=num_samples,
@@ -74,13 +75,13 @@ def run_all_methods(
     label_to_explain,
     markers,
     segment_length: int = 500,
-    overlap: int = 400,
-    threshold=0.0,
-    num_samples: int = 100, 
+    overlap: int = 250,
+    true_score=0.0,
+    num_samples: int = 4500, 
     generate_video = True
 ) -> dict:
     
-    output_dir = '/home/cbolanos/experiments/audioset/'
+    output_dir = '/home/cbolanos/experiments/audioset_audios_eval'
 
     # Naive analysis
     print('Running Naive analysis...')
@@ -118,7 +119,8 @@ def run_all_methods(
             "segment_length": segment_length,
             "overlap": overlap,
             "num_samples": num_samples,
-            "true_markers": markers
+            "true_markers": markers,
+            "true_score": true_score
         },
         "importance_scores": {
             "naive": {
@@ -141,35 +143,36 @@ def run_all_methods(
     }
 
     # Save results
-    output_path = f'{output_dir}{filename}/ft_{label_to_explain}_{threshold}.json'
+    output_path = f'{output_dir}/{filename}/ft_{label_to_explain}.json'
     with open(output_path, 'w') as f:
         json.dump(output_data, f, indent=2)
 
     print(f"Importance scores saved to: {output_path}")
     
-
     if generate_video:
-        audio_path = f'/mnt/data/audioset_24k/unbalanced_train/{filename}.flac'
+        audio_path = f'/mnt/shared/alpha/hdd6T/Datasets/audioset_eval_wav/{filename}.wav'
         wav_data, sample_rate = sf.read(audio_path)
-        resampled_audio = resample(wav_data, int(len(wav_data) * 16000 / 24000))
+        if sample_rate != 16000:
+            wav_data = resample(wav_data, int(len(wav_data) * 16000 / sample_rate))
 
         # Convert stereo to mono if necessary
-        if len(resampled_audio.shape) > 1 and resampled_audio.shape[1] == 2:
-            resampled_audio = resampled_audio.mean(axis=1)
+        if len(wav_data.shape) > 1 and wav_data.shape[1] == 2:
+            wav_data = wav_data.mean(axis=1)
         
         predictions_path = f'{output_dir}/{filename}/predictions_yamnet.json'
         with open(predictions_path, 'r') as f:
             scores_yamnet = np.array(json.load(f)['real_scores'])
+            
         with open('/home/cbolanos/experiments/audioset/labels/labels_yamnet.json', 'r') as f:
             class_names = json.load(f)['label']
         index = class_names.index(label_to_explain)
 
         create_visualization(
-        waveform=resampled_audio,
+        waveform=wav_data,
         scores_yamnet=scores_yamnet,
         class_index=index,
         json_file=output_path,
-        output_file=f'{output_dir}{filename}/video_{label_to_explain}_{threshold}.mp4',
+        output_file=f'{output_dir}/{filename}/video_{label_to_explain}_{filename}.mp4',
         markers=markers
     )
     return output_data

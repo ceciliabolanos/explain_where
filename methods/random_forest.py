@@ -23,15 +23,15 @@ class RandomForest:
         for score in data['scores']:
             y.append(score[label_to_explain])
 
-        RFModel = RandomForestRegressor(n_estimators=10, n_jobs=16)  
+        RFModel = RandomForestRegressor(n_estimators=100, n_jobs=16)  
         RFModel.fit(data['snrs'], y, sample_weight=data['neighborhood'])
 
-        joblib.dump(RFModel, f'/home/cbolanos/experiments/audioset/{self.filename}/rf_100_model_{label_to_explain}.pkl')
+        joblib.dump(RFModel, f'/home/cbolanos/experiments/audioset_audios_eval/{self.filename}/rf_100_model_{label_to_explain}.pkl')
 
     def get_feature_importances(self, label_to_explain):
         self.train_model(label_to_explain)
 
-        RFModel_loaded = joblib.load(f'/home/cbolanos/experiments/audioset/{self.filename}/rf_100_model_{label_to_explain}.pkl')
+        RFModel_loaded = joblib.load(f'/home/cbolanos/experiments/audioset_audios_eval/{self.filename}/rf_100_model_{label_to_explain}.pkl')
         importances = RFModel_loaded.feature_importances_
         
         return importances

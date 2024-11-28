@@ -53,7 +53,7 @@ class DataGenerator:
                 "snrs" : snrs
             }
 
-        output_file = f"/home/cbolanos/experiments/audioset/{filename}/scores_data_{self.mode}.json"
+        output_file = f"/home/cbolanos/experiments/audioset_audios_eval/{filename}/scores_data_{self.mode}.json"
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
         
         with open(output_file, 'w') as json_file:
