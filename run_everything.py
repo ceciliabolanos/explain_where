@@ -42,11 +42,12 @@ def process_folder(folder, folder_path, df, model, segment_length, overlap, num_
         # Check if the file starts with 'ft' and has a .json extension
         if filename.startswith('ft') and filename.endswith('.json'):
             data_generate = True
+            return
 
 
     true_ids = folder_data['father_labels_ids'].tolist()
 
-    # Get predictions
+    # Get predictions 
     predictions_path = os.path.join(folder_path, 'predictions_ast.json')
     predictions = open_json(predictions_path)
     
@@ -74,7 +75,7 @@ def process_folder(folder, folder_path, df, model, segment_length, overlap, num_
         
         # If any label fails the criteria, set flag to False and break
         if (all(folder_data[mask]['label_duration'] < duration_ms*0.3) and 
-                (folder_data[mask]['label_duration'].sum() < duration_ms*0.6)):
+                (folder_data[mask]['label_duration'].sum() < duration_ms*0.4)):
             all_labels_meet_criteria = True
             break
 
@@ -87,7 +88,7 @@ def process_folder(folder, folder_path, df, model, segment_length, overlap, num_
     for id in ids_intersection:
         label = model.config.id2label[id]
         mask = (folder_data['father_labels'] == label)
-        if all(folder_data[mask]['label_duration'] < duration_ms*0.3) and (folder_data[mask]['label_duration'].sum() < duration_ms*0.6):
+        if all(folder_data[mask]['label_duration'] < duration_ms*0.3) and (folder_data[mask]['label_duration'].sum() < duration_ms*0.4):
             if not data_generate:
                 generate_data(folder, 
                             model_name="MIT/ast-finetuned-audioset-10-10-0.4593",
