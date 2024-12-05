@@ -97,7 +97,8 @@ def run_all_methods(
         path=f'{output_dir}/{filename}/scores_data_all_masked.json',
         filename=filename
     )
-    importances_rf = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain)
+    importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
+    importances_rf_shap = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='shap')
 
     # LIME analysis
     print('Running LIME analysis...')
@@ -128,14 +129,18 @@ def run_all_methods(
                 "values": importances_naive.tolist() if hasattr(importances_naive, 'tolist') else importances_naive
             },
             "random_forest": {
-                "masked": {
-                    "method": "RandomForest with masking",
-                    "values": importances_rf.tolist() if hasattr(importances_rf, 'tolist') else importances_rf
+                "tree_importance": {
+                    "method": "masked rf with tree importance",
+                    "values": importances_rf_tree.tolist() if hasattr(importances_rf_tree, 'tolist') else importances_rf_tree
+                },
+                "shap": {
+                    "method": "masked rf with shap importance",
+                    "values": importances_rf_shap.tolist() if hasattr(importances_rf_shap, 'tolist') else importances_rf_shap
                 }
             },
-            "lime": {
+            "linear_regression": {
                 "masked": {
-                    "method": "LIME with masking",
+                    "method": "Linear Regression with masking",
                     "values": importances_lime
                 }
             }
