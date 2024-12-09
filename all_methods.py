@@ -100,8 +100,8 @@ def run_all_methods(
     importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
     importances_rf_shap = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='shap')
 
-    # LIME analysis
-    print('Running LIME analysis...')
+    # LR analysis
+    print('Running Linear Regression analysis...')
     lime_analyzer = LimeAudioExplainer(
         path=f'{output_dir}/{filename}/scores_data_all_masked.json',
         verbose=False,

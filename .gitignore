@@ -2,3 +2,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
+audio_analysis.log
+a.ipynb
+preprocess/classes.ipynb

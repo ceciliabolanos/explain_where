@@ -90,19 +90,19 @@ def read_and_process_importance_scores(file_path):
                 'original_values': np.array(data['importance_scores']['naive']['values'])
             },
             'random_forest': {
-                'tree': {
-                    'method': data['importance_scores']['random_forest']['tree']['method'],
-                    'original_values': np.array(data['importance_scores']['random_forest']['tree']['values'])
+                'tree_importance': {
+                    'method': data['importance_scores']['random_forest']['tree_importance']['method'],
+                    'original_values': np.array(data['importance_scores']['random_forest']['tree_importance']['values'])
                 },
                 'shap': {
                     'method': data['importance_scores']['random_forest']['shap']['method'],
                     'original_values': np.array(data['importance_scores']['random_forest']['shap']['values'])
                 }
             },
-            'lime': {
+            'linear_regression': {
                 'masked': {
-                    'method': data['importance_scores']['lime']['masked']['method'],
-                    'original_values': np.array(data['importance_scores']['lime']['masked']['values']['coefficients'])
+                    'method': data['importance_scores']['linear_regression']['masked']['method'],
+                    'original_values': np.array(data['importance_scores']['linear_regression']['masked']['values']['coefficients'])
                 },
             }
         }
@@ -112,7 +112,7 @@ def read_and_process_importance_scores(file_path):
             process_importance_values(processed_scores['naive']['original_values'])
         
         # Process random forest scores
-        for key in ['tree', 'shap']:
+        for key in ['tree_importance', 'shap']:
             processed_scores['random_forest'][key]['processed_values'], \
             processed_scores['random_forest'][key]['time_points'] = \
                 process_importance_values(processed_scores['random_forest'][key]['original_values'])
@@ -121,7 +121,7 @@ def read_and_process_importance_scores(file_path):
         for key in ['masked']:
             processed_scores['linear_regression'][key]['processed_values'], \
             processed_scores['linear_regression'][key]['time_points'] = \
-                process_importance_values(processed_scores['lime'][key]['original_values'])
+                process_importance_values(processed_scores['linear_regression'][key]['original_values'])
         
         return {
             'metadata': metadata,
@@ -209,7 +209,7 @@ def create_waveform_video_with_importances(waveform, scores_yamnet, class_index,
         importance_data.append(('Naive', naive_values, naive_times))
         
         # Add Random Forest importance values
-        for key in ['tree', 'shap']:
+        for key in ['tree_importance', 'shap']:
             rf_values = processed_scores['random_forest'][key]['processed_values']
             rf_times = processed_scores['random_forest'][key]['time_points']
             importance_data.append((f'Random Forest ({key})', rf_values, rf_times))

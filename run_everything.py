@@ -42,7 +42,7 @@ def process_folder(folder, folder_path, df, model, segment_length, overlap, num_
         # Check if the file starts with 'ft' and has a .json extension
         if filename.startswith('ft') and filename.endswith('.json'):
             data_generate = True
-            return
+            #return
 
 
     true_ids = folder_data['father_labels_ids'].tolist()

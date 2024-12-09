@@ -6,9 +6,9 @@ from utils import open_json
 from transformers import AutoFeatureExtractor, ASTForAudioClassification
 from all_methods import run_all_methods, generate_data
 
-FOLDER = 'ZzwcnxfXLTk'
+FOLDER = '3B0WbwAkByI'
 BASE_PATH = '/home/cbolanos/experiments/audioset_audios_eval/'
-
+LABEL = 'Speech'
 df = pd.read_csv('/home/cbolanos/experiments/audioset/labels/labels_segments.csv')
 
 model = ASTForAudioClassification.from_pretrained("MIT/ast-finetuned-audioset-10-10-0.4593")
@@ -31,24 +31,25 @@ ids_intersection = list(set(predictions['positive_indices']) & set(true_ids))
 # Process each label
 for id in ids_intersection:
     label = model.config.id2label[id]
-    print(label)
-    mask = (folder_data['father_labels'] == label)
-    time_tuples = list(zip(
-            folder_data[mask]['start_time_seconds'],
-            folder_data[mask]['end_time_seconds']
-    ))
+    if label == LABEL:
+        print(label)
+        mask = (folder_data['father_labels'] == label)
+        time_tuples = list(zip(
+                folder_data[mask]['start_time_seconds'],
+                folder_data[mask]['end_time_seconds']
+        ))
 
-    results = run_all_methods(
-        filename=FOLDER,
-        id_to_explain=id,
-        label_to_explain=label,
-        markers=time_tuples,
-        segment_length=500,
-        overlap=250,
-        true_score=predictions['real_scores'][0][id],
-        num_samples=4500,
-        generate_video=True
-    )
-     
+        results = run_all_methods(
+            filename=FOLDER,
+            id_to_explain=id,
+            label_to_explain=label,
+            markers=time_tuples,
+            segment_length=500,
+            overlap=250,
+            true_score=predictions['real_scores'][0][id],
+            num_samples=4500,
+            generate_video=True
+        )
+        
 
                 

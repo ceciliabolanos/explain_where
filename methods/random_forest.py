@@ -38,8 +38,9 @@ class RandomForest:
             with open('/home/cbolanos/experiments/audioset_audios_eval/_8HcEdMMbzQ/scores_data_all_masked.json', 'r') as file:
                 data = json.load(file)
             explainer = shap.TreeExplainer(RFModel_loaded)
-            first_snr = data['snrs'][0].reshape(1, -1)
+            first_snr = np.array(data['snrs'][0])
             choosen_instance = np.concatenate([first_snr, [data['scores'][0][label_to_explain]]]).reshape(1, -1)
+    
             shap_values = explainer.shap_values(choosen_instance)
             importances = shap_values[0]
 
