@@ -13,8 +13,9 @@ import numpy as np
 
 def generate_data(filename, 
                   model_name="MIT/ast-finetuned-audioset-10-10-0.4593",
-                  segment_length=500,
-                  overlap=250,
+                  segment_length=100,
+                  mask_percentage=0.3, 
+                  window_size=3,
                   num_samples=4500):
     
     feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
@@ -55,7 +56,8 @@ def generate_data(filename,
     data_generator = DataGenerator(
         wav_data,
         segment_length=segment_length,
-        overlap=overlap,
+        mask_percentage=mask_percentage, 
+        window_size=window_size,
         num_samples=num_samples,
         predict_fn=predict_fn,
         sr=16000
@@ -68,14 +70,14 @@ def generate_data(filename,
     data_generator.mode = 'all_masked'
     data_generator.generate(filename)
 
-
 def run_all_methods(
     filename: str,
     id_to_explain,
     label_to_explain,
     markers,
-    segment_length: int = 500,
-    overlap: int = 250,
+    segment_length: int = 100,
+    mask_percentage: float=0.3, 
+    window_size: int=3,
     true_score=0.0,
     num_samples: int = 4500, 
     generate_video = True
@@ -86,7 +88,7 @@ def run_all_methods(
     # Naive analysis
     print('Running Naive analysis...')
     naive_analyzer = NaiveAudioAnalyzer(
-        path=f'{output_dir}/{filename}/scores_data_naive_masked_zeros.json',
+        path=f'{output_dir}/{filename}/scores_data_naive_masked_zeros_p{mask_percentage}_m{window_size}.json',
         filename=filename
     )
     importances_naive = naive_analyzer.get_feature_importance(label_to_explain=id_to_explain)
@@ -94,7 +96,7 @@ def run_all_methods(
     # Random Forest analysis    
     print('Running Random Forest analysis...')
     rf_analyzer = RandomForest(
-        path=f'{output_dir}/{filename}/scores_data_all_masked.json',
+        path=f'{output_dir}/{filename}/scores_data_all_masked_p{mask_percentage}_m{window_size}.json',
         filename=filename
     )
     importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
@@ -103,7 +105,7 @@ def run_all_methods(
     # LR analysis
     print('Running Linear Regression analysis...')
     lime_analyzer = LimeAudioExplainer(
-        path=f'{output_dir}/{filename}/scores_data_all_masked.json',
+        path=f'{output_dir}/{filename}/scores_data_all_masked_p{mask_percentage}_m{window_size}.json',
         verbose=False,
         absolute_feature_sort=False
     )
@@ -118,7 +120,8 @@ def run_all_methods(
             "id_explained": id_to_explain,
             "label_explained": label_to_explain,
             "segment_length": segment_length,
-            "overlap": overlap,
+            "mask_percentage": mask_percentage, 
+            "window_size": window_size,
             "num_samples": num_samples,
             "true_markers": markers,
             "true_score": true_score
@@ -148,7 +151,7 @@ def run_all_methods(
     }
 
     # Save results
-    output_path = f'{output_dir}/{filename}/ft_{label_to_explain}.json'
+    output_path = f'{output_dir}/{filename}/ft_{label_to_explain}_{mask_percentage}_{window_size}.json'
     with open(output_path, 'w') as f:
         json.dump(output_data, f, indent=2)
 
