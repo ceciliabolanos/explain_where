@@ -5,7 +5,6 @@ from sklearn.utils import check_random_state
 from regressors import stats
 from functools import partial
 
-import sklearn
 import sklearn.preprocessing
 import json
 
