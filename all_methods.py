@@ -88,7 +88,7 @@ def run_all_methods(
     # Naive analysis
     print('Running Naive analysis...')
     naive_analyzer = NaiveAudioAnalyzer(
-        path=f'{output_dir}/{filename}/scores_data_naive_masked_zeros_p{mask_percentage}_m{window_size}.json',
+        path=f'{output_dir}/{filename}/scores_data_naive_masked_zeros.json',
         filename=filename
     )
     importances_naive = naive_analyzer.get_feature_importance(label_to_explain=id_to_explain)
@@ -97,7 +97,9 @@ def run_all_methods(
     print('Running Random Forest analysis...')
     rf_analyzer = RandomForest(
         path=f'{output_dir}/{filename}/scores_data_all_masked_p{mask_percentage}_m{window_size}.json',
-        filename=filename
+        filename=filename,
+        mask_percentage=mask_percentage,
+        window_size=window_size
     )
     importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
     importances_rf_shap = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='shap')
@@ -151,7 +153,7 @@ def run_all_methods(
     }
 
     # Save results
-    output_path = f'{output_dir}/{filename}/ft_{label_to_explain}_{mask_percentage}_{window_size}.json'
+    output_path = f'{output_dir}/{filename}/ft_{label_to_explain}_p{mask_percentage}_m{window_size}.json'
     with open(output_path, 'w') as f:
         json.dump(output_data, f, indent=2)
 

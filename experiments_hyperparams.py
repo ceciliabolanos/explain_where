@@ -7,8 +7,7 @@ from tqdm import tqdm
 from transformers import AutoFeatureExtractor, ASTForAudioClassification
 from utils import open_json
 from all_methods import run_all_methods, generate_data
-import shutil  
-
+import shutil
 
 def setup_logging():
     """Configure logging settings"""
@@ -33,13 +32,13 @@ def load_model(model_name):
         raise
 
 def process_folder(folder, 
-                   folder_path,
-                    df, 
-                    model, 
-                    segment_length, 
-                    mask_percentage, 
-                    window_size, 
-                    num_samples):
+                   folder_path, 
+                   df, 
+                   model, 
+                   segment_length, 
+                   mask_percentage, 
+                   window_size, 
+                   num_samples):
     
     """Process a single folder of audio data"""
     # Get ground truth labels for this folder
@@ -82,13 +81,11 @@ def process_folder(folder,
         label = model.config.id2label[id]
         mask = (folder_data['father_labels'] == label)
         
-        # If any label fails the criteria, set flag to False and break
         if (all(folder_data[mask]['label_duration'] < duration_ms*0.3) and 
                 (folder_data[mask]['label_duration'].sum() < duration_ms*0.4)):
             all_labels_meet_criteria = True
             break
 
-    # If no label meets the criteria, remove the folder
     if not all_labels_meet_criteria:
         shutil.rmtree(folder_path)
         return   
@@ -134,10 +131,12 @@ def main():
     LABELS_PATH = '/home/cbolanos/experiments/audioset/labels/labels_segments.csv'
     MODEL_NAME = "MIT/ast-finetuned-audioset-10-10-0.4593"
     
-    SEGMENT_LENGTH=100
-    MASK_PERCENTAGE=0.3
-    WINDOW_SIZE=3
+    SEGMENT_LENGTH = 100
     NUM_SAMPLES = 4500
+    
+    # Masking parameters to try
+    mask_percentages = [0.1, 0.15, 0.2, 0.3, 0.4]
+    window_sizes = [2, 3, 4, 5, 6]
     
     # Setup logging
     setup_logging()
@@ -148,24 +147,30 @@ def main():
         df = pd.read_csv(LABELS_PATH)
         feature_extractor, model = load_model(MODEL_NAME)
 
-        # Process each folder
-        for folder in tqdm(os.listdir(BASE_PATH)):
-            folder_path = os.path.join(BASE_PATH, folder)
-                
-            try:
-                process_folder(
-                    folder=folder,
-                    folder_path=folder_path,
-                    df=df,
-                    model=model,
-                    segment_length=SEGMENT_LENGTH,
-                    max_prob=MASK_PERCENTAGE,
-                    max_total_masked=WINDOW_SIZE,
-                    num_samples=NUM_SAMPLES
-                )
-            except Exception as e:
-                logging.error(f"Error processing folder {folder}: {str(e)}")
-                continue
+        # Get first 70 folders in alphabetical order
+        all_folders = sorted(os.listdir(BASE_PATH))[20:100]
+        
+        # Iterate through masking parameters
+        for mask_percentage in mask_percentages:
+            for window_size in window_sizes:                
+                # Process each folder
+                for folder in tqdm(all_folders):
+                    folder_path = os.path.join(BASE_PATH, folder)
+                    
+                    try:
+                        process_folder(
+                            folder=folder,
+                            folder_path=folder_path,
+                            df=df,
+                            model=model,
+                            segment_length=SEGMENT_LENGTH,
+                            mask_percentage=mask_percentage,
+                            window_size=window_size,
+                            num_samples=NUM_SAMPLES
+                        )
+                    except Exception as e:
+                        logging.error(f"Error processing folder {folder}: {str(e)}")
+                        continue
 
     except Exception as e:
         logging.error(f"Fatal error in main execution: {str(e)}")

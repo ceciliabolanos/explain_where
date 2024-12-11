@@ -1,8 +1,5 @@
-Escribamos lo que estamos haciendo: 
-
-
 Estamos buscando explicar el por qué se predijo una determinada clase. Ese por qué, en nuestro caso, será encontrar los segmentos más importantes para la predicción de la clase.
-Nuestra intuición nos dice que en el segmento más importante es donde deberia estar la clase predicha.
+Nuestra intuición nos dice que en el segmento más importante es donde debería estar la clase predicha.
 
 Para esto consideramos diferentes métodos para ordenar la importancia de cada segmento en la predicción final.
 
@@ -17,3 +14,20 @@ el y es el score predicho para la clase para el audio perturbado. La importancia
 el y es el score predicho para la clase para el audio perturbado. La importancia de cada feature (cada segmento) es el coeficiente que lo acompaña en la regresión.
 
 
+First step:
+
+Process the dataframe, we need a df with the audios to process and the labels we have segmented for each class. 
+Here we have a problem: There's a child_id so, perhaps, the same audio was segmented with a different label but train with other (for example: speech and man speech). 
+For that reason we leave a column 'positive_labels' and 'father_labels'. We should use only 'positive_labels'.
+
+~/explain_where$ python preprocess/dataframe.py
+
+-----------------------------------------------
+
+Primer paso: carpeta preprocess/
+
+Acá encontramos 2 scripts importantes.
+ El primero que hay q realizar es dataframe.py aca hacemos un preprocesamiento del dataframe que tenemos segmentado en donde obtenemos el ID base, los labels que hay que predecir (En este caso los labels son todos movidos a un nivel 2 en el arbol de ontologia) y sacamos los labels nan, que no encontramos su label en nombre. Aca tambien tenemos la duracion de cada label para despues filtrar aquellos que duren mas de 20% de la senal. Path to save this csv: '/home/cbolanos/experiments/audioset/labels/labels_segments.csv'
+y el segundo audios.py para poder guardarnos las predicciones de cada modelo (AST y Yamnet). El segundo
+
+Despues tenemos run_everything para correr toda la generacion de data y random fores y run_Example que nos sirve cuando queremos el video de resultado entonces solo corremos una carpeta y no todo
