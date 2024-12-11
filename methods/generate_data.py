@@ -10,11 +10,22 @@ SEED = 42
 np.random.seed(SEED)
 random.seed(SEED)
 
+
 class DataGenerator:
-    def __init__(self, wav, mode='naive_masked_zeros', segment_length=500, overlap=100, num_samples=10, predict_fn=None, sr=16000):
+    def __init__(self, wav, 
+                 mode='naive_masked_zeros', 
+                 segment_length=100, 
+                 mask_percentage=0.3, 
+                 window_size=3, 
+                 num_samples=10, 
+                 predict_fn=None, 
+                 sr=16000):
+        
         self.mode = mode
         self.segment_length = segment_length
-        self.overlap = overlap
+        self.mask_percentage = mask_percentage
+        self.window_size = window_size
+        self.overlap = 0
         self.num_samples = num_samples
         self.predict_fn = predict_fn
         self.sr = sr
@@ -53,7 +64,7 @@ class DataGenerator:
                 "snrs" : snrs
             }
 
-        output_file = f"/home/cbolanos/experiments/audioset_audios_eval/{filename}/scores_data_{self.mode}.json"
+        output_file = f"/home/cbolanos/experiments/audioset_audios_eval/{filename}/scores_data_{self.mode}_p{self.mask_percentage}_m{self.window_size}.json"
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
         
         with open(output_file, 'w') as json_file:
@@ -218,7 +229,11 @@ class DataGenerator:
 
     def _generate_all_masked(self):
         n_components = len(self.segment_signal(self.wav))
-        snrs = self.generate_specific_combinations(n_components=n_components)
+        snrs = self.generate_specific_combinations(n_components=n_components, 
+                                                   num_samples=self.num_samples, 
+                                                   mask_percentage=self.mask_percentage,
+                                                   window_size=self.window_size)
+        
         scores, neighborhood = self.get_scores_neigh(batch_size=400, snrs=snrs)
         return scores, snrs, neighborhood
     
@@ -268,21 +283,96 @@ class DataGenerator:
             labels.extend(preds)
         return  labels, neighborhood
 
-    def generate_specific_combinations(self, n_components):
-        all_combinations = [np.ones(n_components, dtype=int).tolist()]  # Start with all-ones array
-        max_zeros = math.ceil(n_components * 0.30)  # 30% redondeado hacia arriba
+    # def generate_specific_combinations(self, n_components):
+    #     all_combinations = [np.ones(n_components, dtype=int).tolist()]  # Start with all-ones array
+    #     max_zeros = math.ceil(n_components * 0.30)  # 30% redondeado hacia arriba
         
-        for num_zeros in range(1, max_zeros + 1):
-            zero_positions = list(combinations(range(n_components), num_zeros))
+    #     for num_zeros in range(1, max_zeros + 1):
+    #         zero_positions = list(combinations(range(n_components), num_zeros))
             
-            for positions in zero_positions:
-                if len(all_combinations) >= self.num_samples:  
-                    return all_combinations
+    #         for positions in zero_positions:
+    #             if len(all_combinations) >= self.num_samples:  
+    #                 return all_combinations
                 
-                arr = np.ones(n_components, dtype=int)
-                arr[list(positions)] = 0
-                all_combinations.append(arr.tolist())
+    #             arr = np.ones(n_components, dtype=int)
+    #             arr[list(positions)] = 0
+    #             all_combinations.append(arr.tolist())
         
-        return all_combinations
+    #     return all_combinations
 
-    
+    def generate_masked_combinations(self, n_components, mask_percentage=0.3, window_size=3):
+        """
+        Generate masked combinations using window-based approach.
+        
+        Args:
+            n_components (int): Total number of components
+            mask_percentage (float): Percentage of audio to mask (0-100)
+            window_size (int): Size of masking window
+        
+        Returns:
+            list: Array of 1s and 0s representing the masking pattern
+        """
+        result = np.ones(n_components, dtype=int)
+        
+        # Calculate target number of components to mask
+        target_masked = int(np.ceil(n_components * mask_percentage))
+        total_masked = 0
+        
+        # Generate initial set of random positions
+        possible_positions = list(range(n_components + 1))
+        selected_positions = []
+        
+        while total_masked < target_masked and possible_positions:
+            # Select a random starting position
+            start_pos = random.choice(possible_positions)
+            possible_positions.remove(start_pos)
+            
+            # Check how many unmasked positions we would actually mask
+            effective_mask = 0
+            for i in range(start_pos, min(start_pos + window_size, n_components)):
+                if result[i] == 1:
+                    effective_mask += 1
+            
+            # If adding this window would exceed target, try to find a better position
+            if total_masked + effective_mask > target_masked:
+                continue
+                
+            # Apply the mask
+            result[start_pos:start_pos + window_size] = 0
+            total_masked += effective_mask
+            selected_positions.append(start_pos)
+        
+        # If we haven't reached target_masked, try to add individual positions
+        if total_masked < target_masked:
+            remaining = target_masked - total_masked
+            for i in range(n_components):
+                if remaining <= 0:
+                    break
+                if result[i] == 1:
+                    result[i] = 0
+                    remaining -= 1
+                    
+        return result.tolist()
+
+    def generate_specific_combinations(self, n_components, num_samples, mask_percentage=0.3, window_size=3):
+        """
+        Generate multiple masked combinations.
+        
+        Args:
+            n_components (int): Total number of components
+            num_samples (int): Number of combinations to generate
+            mask_percentage (float): Percentage of audio to mask (0-100)
+            window_size (int): Size of masking window
+        
+        Returns:
+            list: List of masked combinations
+        """
+        combinations = [np.ones(n_components, dtype=int).tolist()]
+        for _ in range(num_samples):
+            combination = self.generate_masked_combinations(
+                n_components,
+                mask_percentage,
+                window_size
+            )
+            combinations.append(combination)
+        return combinations
