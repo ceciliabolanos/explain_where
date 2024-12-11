@@ -63,8 +63,10 @@ class DataGenerator:
                 "score_real": self.predict_fn(self.wav),
                 "snrs" : snrs
             }
-
-        output_file = f"/home/cbolanos/experiments/audioset_audios_eval/{filename}/scores_data_{self.mode}_p{self.mask_percentage}_m{self.window_size}.json"
+        if self.mode == 'all_masked':
+            output_file = f"/home/cbolanos/experiments/audioset_audios_eval/{filename}/scores_data_{self.mode}_p{self.mask_percentage}_m{self.window_size}.json"
+        else:
+            output_file = f"/home/cbolanos/experiments/audioset_audios_eval/{filename}/scores_data_{self.mode}.json"
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
         
         with open(output_file, 'w') as json_file:
@@ -234,7 +236,7 @@ class DataGenerator:
                                                    mask_percentage=self.mask_percentage,
                                                    window_size=self.window_size)
         
-        scores, neighborhood = self.get_scores_neigh(batch_size=400, snrs=snrs)
+        scores, neighborhood = self.get_scores_neigh(batch_size=128, snrs=snrs)
         return scores, snrs, neighborhood
     
     def create_masked_wav(self, row):
@@ -269,9 +271,6 @@ class DataGenerator:
         j=0
         for row in snrs:
             temp = self.create_masked_wav(row)
-            if j == 0:
-                print(f'are equal: {temp==self.wav}')
-                j=j+1
             audios.append(temp)
             neighborhood.append(euclidean(self.wav, temp))
             if len(audios) == batch_size:
