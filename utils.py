@@ -17,20 +17,7 @@ def open_json(file_path):
         return json.load(f)
 
 
-def process_importance_values(values, segment_size=500, step_size=250):
-    """
-    Process importance values using a Bartlett window approach for smoother transitions.
-    
-    Args:
-        values: numpy array of importance values for each segment
-        segment_size: size of each segment in samples (default: 50)
-        step_size: number of samples between segment starts (default: 10)
-    
-    Returns:
-        tuple: (processed_importance, timeline)
-        - processed_importance: numpy array of smoothed importance values
-        - timeline: numpy array of corresponding time points
-    """
+def process_importance_values(values, segment_size=100, step_size=100):
     # Calculate total duration
     num_segments = len(values)
     total_duration = (num_segments - 1) * step_size + segment_size
@@ -43,9 +30,6 @@ def process_importance_values(values, segment_size=500, step_size=250):
     for i, importance in enumerate(values):
         start_idx = i * step_size
         end_idx = start_idx + segment_size
-        # Create Bartlett window for smooth transitions
-        # window = np.bartlett(segment_size)
-        # accumulated_importance[start_idx:end_idx] += importance * window
         accumulated_importance[start_idx:end_idx] += importance 
 
     # Calculate overlap count for normalization
