@@ -3,8 +3,6 @@ import os
 import json 
 from scipy.spatial.distance import euclidean
 import random
-import math
-from itertools import combinations
 
 SEED = 42
 np.random.seed(SEED)
@@ -63,6 +61,7 @@ class DataGenerator:
                 "score_real": self.predict_fn(self.wav),
                 "snrs" : snrs
             }
+            
         if self.mode == 'all_masked':
             output_file = f"/home/cbolanos/experiments/audioset_audios_eval/{filename}/scores_data_{self.mode}_p{self.mask_percentage}_m{self.window_size}.json"
         else:
