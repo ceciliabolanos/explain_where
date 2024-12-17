@@ -7,14 +7,6 @@ class NaiveAudioAnalyzer:
     This class implements a naive approach to determine feature importance
     in audio by systematically masking portions of the audio and measuring
     the effect on model predictions.
-    
-    Args:
-        wav (np.ndarray): Input audio waveform array
-        sr (int): Sampling rate of the audio in Hz
-        
-    Attributes:
-        wav (np.ndarray): Stored audio waveform
-        sr (int): Stored sampling rate
     """
     
     def __init__(self, path, filename):

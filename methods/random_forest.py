@@ -36,6 +36,7 @@ class RandomForest:
 
         if method == 'tree':
             importances = RFModel_loaded.feature_importances_
+        
         elif method == 'shap':
             with open(self.path, 'r') as file:
                 data = json.load(file)
