@@ -121,7 +121,7 @@ class AudioExplanation:
         return {
             "coefficients": exp[0].tolist() if hasattr(exp[0], 'tolist') else exp[0],
             "p_values": exp[1].tolist() if hasattr(exp[1], 'tolist') else exp[1],
-            "local_pred": self.local_pred,
+            "local_pred": self.local_pred.tolist() if hasattr(self.local_pred, 'tolist') else str(self.local_pred)
         }
 
 
