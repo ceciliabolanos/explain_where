@@ -8,7 +8,7 @@ from transformers import AutoFeatureExtractor, ASTForAudioClassification
 from utils import open_json
 from all_methods import run_all_methods, generate_data
 import shutil  
-
+import json, ast
 
 def setup_logging():
     """Configure logging settings"""
@@ -34,59 +34,76 @@ def load_model(model_name):
 
 def process_folder(folder, 
                    folder_path,
-                    df, 
-                    model, 
-                    segment_length, 
-                    mask_percentage, 
-                    window_size, 
-                    num_samples):
+                   df, 
+                   model, 
+                   segment_length, 
+                   mask_percentage, 
+                   window_size, 
+                   num_samples):
     
     """Process a single folder of audio data"""
+
     # Get ground truth labels for this folder
     folder_data = df[df['base_segment_id'] == folder]
-
-    data_generate = False
-
-    target_filename = f"scores_data_all_masked_p{mask_percentage}_m{window_size}.json"
-    full_path = os.path.join(folder_path, target_filename)
     
-    # Check if the exact file exists
-    if os.path.isfile(full_path):
-         data_generate = True
-
-    true_ids = folder_data['father_labels_ids'].tolist()
+    output_path = '/home/cbolanos/experiments/audioset/labels/true_medians.json'
+    with open(output_path, 'f') as f:
+        median_score = json.load(f)
 
     # Get predictions 
     predictions_path = os.path.join(folder_path, 'predictions_ast.json')
     predictions = open_json(predictions_path)
-    
-    ids_intersection = list(set(predictions['positive_indices']) & set(true_ids))
-    
-    if len(ids_intersection) == 0:
-        shutil.rmtree(folder_path)
-        return
-    
+  
+    # Load the audio
     wav_data, sample_rate = sf.read(f'/mnt/shared/alpha/hdd6T/Datasets/audioset_eval_wav/{folder}.wav')
     if sample_rate != 16000:
         wav_data = resample(wav_data, int(len(wav_data) * 16000 / sample_rate))
-
     if len(wav_data.shape) > 1 and wav_data.shape[1] == 2:
         wav_data = wav_data.mean(axis=1)
-
     duration_ms = (len(wav_data) / 16000) * 1000
-    
-    all_labels_meet_criteria = False 
 
-    # Check each label
-    for id in ids_intersection:
+
+    data_generate = False
+
+     # Check if the exact file exists to not generate it again
+    target_filename = f"scores_data_all_masked_p{mask_percentage}_m{window_size}.json"
+    full_path = os.path.join(folder_path, target_filename)
+    if os.path.isfile(full_path):
+         data_generate = True
+
+    # Get the ids of the labels, if father_labels is not present, we try with a child label
+    true_ids = folder_data['father_labels_ids'].tolist()
+    child_ids = []
+    for id_list_str in folder_data['other_labels_ids']:
+        id_list = ast.literal_eval(id_list_str)  # Convert string to list
+        child_ids.extend([x for x in id_list if x != -1])  # Optional: filter out -1s
+
+
+    all_labels_meet_criteria = False 
+    ids_intersection = []
+    # Check first father labels
+    for i in range(len(true_ids)):
+        id = true_ids[i]
         label = model.config.id2label[id]
         mask = (folder_data['father_labels'] == label)
-        
-        # If any label fails the criteria, set flag to False and break
-        if (all(folder_data[mask]['label_duration'] < duration_ms*0.3) and 
-                (folder_data[mask]['label_duration'].sum() < duration_ms*0.4)):
-            all_labels_meet_criteria = True
-            break
+
+        if predictions['real_scores'][0][id] > median_score[id]:
+            # If any label fails the criteria, set flag to False and break
+            if (all(folder_data[mask]['label_duration'] < duration_ms*0.3) and 
+                    (folder_data[mask]['label_duration'].sum() < duration_ms*0.4)):
+                all_labels_meet_criteria = True
+                ids_intersection[id] = id
+                break
+        else:
+            for j in range(len(child_ids)):
+                if predictions['real_scores'][0][child_ids[j]] > median_score[child_ids[j]]:
+                    # If any label fails the criteria, set flag to False and break
+                    if (all(folder_data[mask]['label_duration'] < duration_ms*0.3) and 
+                            (folder_data[mask]['label_duration'].sum() < duration_ms*0.4)):
+                        all_labels_meet_criteria = True
+                        ids_intersection[id] = child_ids[j]
+                        print(f"Using child label {child_ids[j]} instead of father label {id}")
+                        break
 
     # If no label meets the criteria, remove the folder
     if not all_labels_meet_criteria:
@@ -94,38 +111,36 @@ def process_folder(folder,
         return   
    
     # Process each label
-    for id in ids_intersection:
+    for id in ids_intersection.keys():
         label = model.config.id2label[id]
         mask = (folder_data['father_labels'] == label)
-        if all(folder_data[mask]['label_duration'] < duration_ms*0.3) and (folder_data[mask]['label_duration'].sum() < duration_ms*0.4):
-            if not data_generate:
-                generate_data(folder, 
-                            model_name="MIT/ast-finetuned-audioset-10-10-0.4593",
-                            segment_length=segment_length,
-                            mask_percentage=mask_percentage,
-                            window_size=window_size,
-                            num_samples=num_samples)
-                data_generate = True
-            
-            time_tuples = list(zip(
-                folder_data[mask]['start_time_seconds'],
-                folder_data[mask]['end_time_seconds']
-            ))
 
-            results = run_all_methods(
-                filename=folder,
-                id_to_explain=id,
-                label_to_explain=label,
-                markers=time_tuples,
-                segment_length=segment_length,
-                mask_percentage=mask_percentage,
-                window_size=window_size,
-                true_score=predictions['real_scores'][0][id],
-                num_samples=num_samples,
-                generate_video=False
-            )
-        else:
-            logging.info(f'{label} too long')
+        if not data_generate:
+            generate_data(folder, 
+                        model_name="MIT/ast-finetuned-audioset-10-10-0.4593",
+                        segment_length=segment_length,
+                        mask_percentage=mask_percentage,
+                        window_size=window_size,
+                        num_samples=num_samples)
+            data_generate = True
+        
+        time_tuples = list(zip(
+            folder_data[mask]['start_time_seconds'],
+            folder_data[mask]['end_time_seconds']
+        ))
+
+        results = run_all_methods(
+            filename=folder,
+            id_to_explain=ids_intersection[id],
+            label_to_explain=label,
+            markers=time_tuples,
+            segment_length=segment_length,
+            mask_percentage=mask_percentage,
+            window_size=window_size,
+            true_score=predictions['real_scores'][0][ids_intersection[id]],
+            num_samples=num_samples,
+            generate_video=False
+        )
     return
           
 def main():
