@@ -182,7 +182,7 @@ def run_all_methods(
         scores_yamnet=scores_yamnet,
         class_index=index,
         json_file=output_path,
-        output_file=f'{output_dir}/{filename}/video_{label_to_explain}_{filename}.mp4',
+        output_file=f'{output_dir}/{filename}/video_{label_to_explain}_{filename}_p{mask_percentage}_m{window_size}.mp4',
         markers=markers
     )
     return output_data
