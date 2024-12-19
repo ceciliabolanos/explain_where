@@ -1,7 +1,7 @@
 import json
 import numpy as np
 from tqdm import tqdm
-from utils import get_patterns
+import re
 import os
 import pandas as pd
 import argparse
@@ -20,13 +20,13 @@ def time_in_segmentation(max_index, list_of_tuples, granularidad_ms):
         # If there is an intersection, check its duration
         if intersection_end > intersection_start:
             intersection_duration = intersection_end - intersection_start
-            if intersection_duration >= 0.1:
+            if intersection_duration >= 0.09:
                 return 1 # capaz intesection deberia ser el resultado
     return 0
 
 
 def generate_sequence(length):
-    return [i * 0.250 for i in range(length)]
+    return [i * 0.1 for i in range(length)]
 
 
 def create_segmentation_vector(times_gt, times, granularidad_ms): 
@@ -40,10 +40,9 @@ def create_segmentation_vector(times_gt, times, granularidad_ms):
 
 
 def process_audio_file(data, method):
-    id_explained = data['metadata']['id_explained']
     segment_length = data["metadata"]['segment_length']
     filename = data["metadata"]['filename']
-    overlap = data["metadata"]['overlap']
+    overlap = 0 #data["metadata"]['overlap']
     granularidad_ms = segment_length - overlap
     times_gt = data['metadata']["true_markers"]
     
@@ -71,6 +70,9 @@ def process_audio_file(data, method):
     # Calculate AUC
     roc_auc = auc(fpr, tpr)
 
+    if sum(times_segmentation) == 0:
+        print(filename)
+    
     # Calculate scores
     order_segmentation_values = {
         'real_order': times_segmentation, # Original order of segmentation values (0s and 1s)
@@ -86,12 +88,12 @@ def process_audio_file(data, method):
         **order_segmentation_values
     }
 
-def get(method: str, base_path: str):
-    patterns = get_patterns()
+def get(method: str, mask_percentage, window_size, base_path: str, option: str):
     results = []
     
     for root, _, files in tqdm(os.walk(os.path.join(base_path, 'audioset_audios_eval'))):
-        json_files = [f for pattern in patterns for f in files if pattern.match(f)]
+        pattern = re.compile(rf'ft_.*_p{mask_percentage}_m{window_size}\.json$')
+        json_files = [f for f in files if pattern.match(f)]
         
         for json_file in json_files:
             file_path = os.path.join(root, json_file)
@@ -102,11 +104,14 @@ def get(method: str, base_path: str):
             results.append(result)
         
     # Save results
-    output_dir = os.path.join(base_path, 'audioset_evaluation/auc')
+    output_dir = os.path.join(base_path, f'audioset_evaluation/auc/{option}')
     os.makedirs(output_dir, exist_ok=True)
     
     pred_df = pd.DataFrame(results)
-    pred_df.to_csv(os.path.join(output_dir, f'order_{method}.tsv'), sep='\t', index=False)
+    if option == 'hyperparams':
+        pred_df.to_csv(os.path.join(output_dir, f'order_{method}_p{mask_percentage}_m{window_size}.tsv'), sep='\t', index=False)
+    elif option == 'selection_criteria':
+        pred_df.to_csv(os.path.join(output_dir, f'order_{method}_p{mask_percentage}_m{window_size}_final.tsv'), sep='\t', index=False)
 
 
 
@@ -115,10 +120,15 @@ def main():
     parser.add_argument('--base_path', type=str,
                       default='/home/cbolanos/experiments',
                       help='Base path for AudioSet experiments')
-
+    parser.add_argument('--option', type=str, default='hyperparams',
+                      help='Option to run: hyperparams or selection_criteria')
     args = parser.parse_args()
-    for method in ['tree_importance', 'shap', 'naive', 'linear_regression']:
-        get(method, args.base_path)
+       
+    if args.option == 'hyperparams':
+        for mask_percentage in [0.1, 0.15, 0.2, 0.3, 0.4]:
+            for window_size in [1, 2, 3, 4, 5, 6]:
+                for method in ['tree_importance', 'shap', 'naive', 'linear_regression']:
+                    get(method, mask_percentage, window_size, args.base_path, args.option)
 
 
 if __name__ == '__main__':
