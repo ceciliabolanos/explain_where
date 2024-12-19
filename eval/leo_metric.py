@@ -4,12 +4,13 @@ import soundfile as sf
 from scipy.signal import resample
 import json
 from tqdm import tqdm
-from utils import process_importance_values, get_patterns
+from utils import process_importance_values
 import os
 import pandas as pd
 import argparse
+import re
 
-def save_scores(filename, data, score_curves, method):
+def save_scores(filename, data, score_curves, method, mask_percentage, window_size):
     scores = {
         'filename': filename,
         'event_label': data['metadata']['label_explained'],
@@ -21,7 +22,7 @@ def save_scores(filename, data, score_curves, method):
     dir_path = os.path.join('/home/cbolanos/experiments/audioset_audios_eval', filename)
     os.makedirs(dir_path, exist_ok=True)
     
-    with open(os.path.join(dir_path, f'scores_curves_{method}_{label_explained}.json'), 'w') as f:
+    with open(os.path.join(dir_path, f'scores_curves_{method}_{label_explained}_p{mask_percentage}_m{window_size}.json'), 'w') as f:
         json.dump(scores, f, indent=2)
     
 
@@ -54,19 +55,19 @@ def predict_fn(wav_array, feature_extractor, model):
         
     return logits.cpu().tolist()
 
-def process_audio_file(file_path, data, model, feature_extractor, method):
+def process_audio_file(file_path, data, model, feature_extractor, method, mask_percentage, window_size):
     filename = data["metadata"]['filename']
     label_explained = data['metadata']['label_explained']
     id_explained = data['metadata']['id_explained']
     
-    score_path = os.path.join('/home/cbolanos/experiments/audioset_audios_eval', filename, f'scores_curves_{method}_{label_explained}.json')
+    score_path = os.path.join('/home/cbolanos/experiments/audioset_audios_eval', filename, f'scores_curves_{method}_{label_explained}_p{mask_percentage}_m{window_size}.json')
     
     if os.path.exists(score_path):
         with open(score_path, 'r') as f:
             return json.load(f)
             
     segment_length = data["metadata"]['segment_length']
-    overlap = data["metadata"]['overlap']
+    overlap = 0 #data["metadata"]['overlap']
     granularidad_ms = segment_length - overlap
     times_gt = data['metadata']["true_markers"]
     
@@ -113,7 +114,7 @@ def process_audio_file(file_path, data, model, feature_extractor, method):
     }
     
     # Process in batches
-    batch_size = 250
+    batch_size = 100
     list_descending_higher = []
     list_descending_lower = []
     for i in range(0, len(sorted_importances_d), batch_size):
@@ -144,7 +145,7 @@ def process_audio_file(file_path, data, model, feature_extractor, method):
     score_curves['score_curve_descending_higher'] = [results_descending[i][id_explained] for i in range(len(list_descending_higher))]
     score_curves['score_curve_descending_lower'] = [results_ascending[i][id_explained] for i in range(len(list_descending_lower))]
 
-    save_scores(filename, data, score_curves, method)
+    save_scores(filename, data, score_curves, method, mask_percentage, window_size)
 
     return {
         'filename': filename,
@@ -154,14 +155,14 @@ def process_audio_file(file_path, data, model, feature_extractor, method):
     }
 
 
-def get(method: str, model_name: str, base_path: str):
+def get(method: str, model_name: str, base_path: str, mask_percentage, window_size):
     model, feature_extractor = get_model_and_extractor(model_name)
-    patterns = get_patterns()
     results = []
     
     for root, _, files in tqdm(os.walk(os.path.join(base_path, 'audioset_audios_eval'))):
-        json_files = [f for pattern in patterns for f in files if pattern.match(f)]
-        
+        pattern = re.compile(rf'ft_.*_p{mask_percentage}_m{window_size}\.json$')
+        json_files = [f for f in files if pattern.match(f)]
+
         for json_file in json_files:
             file_path = os.path.join(root, json_file)
             with open(file_path, 'r') as file:
@@ -171,18 +172,18 @@ def get(method: str, model_name: str, base_path: str):
                                     f"{data['metadata']['filename']}.wav")
             
             try:
-                result = process_audio_file(audio_path, data, model, feature_extractor, method)
+                result = process_audio_file(audio_path, data, model, feature_extractor, method, mask_percentage, window_size)
                 results.append(result)
             except Exception as e:
                 print(f"Error processing {file_path}: {str(e)}")
                 continue
     
     # Save results
-    output_dir = os.path.join(base_path, 'audioset_evaluation/leo_metric')
+    output_dir = os.path.join(base_path, 'audioset_evaluation/leo_metric/hyperparams')
     os.makedirs(output_dir, exist_ok=True)
     
     pred_df = pd.DataFrame(results)
-    pred_df.to_csv(os.path.join(output_dir, f'score_curve_{method}.tsv'), sep='\t', index=False)
+    pred_df.to_csv(os.path.join(output_dir, f'score_curve_{method}_p{mask_percentage}_m{window_size}.tsv'), sep='\t', index=False)
 
 
 def main():
@@ -192,8 +193,11 @@ def main():
                       help='Base path for AudioSet experiments')
 
     args = parser.parse_args()
-    for method in ['shap', 'tree_importance', 'naive', 'linear_regression']:
-        get(method, "ast", args.base_path)
+   
+    for mask_percentage in [0.1, 0.15, 0.2, 0.3, 0.4]:
+        for window_size in [1, 2, 3, 4, 5, 6]:
+            for method in ['shap', 'tree_importance', 'naive', 'linear_regression']:
+                get(method, "ast", args.base_path, mask_percentage, window_size)
 
 if __name__ == '__main__':
     main()
