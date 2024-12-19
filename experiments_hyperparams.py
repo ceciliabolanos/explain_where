@@ -8,6 +8,7 @@ from transformers import AutoFeatureExtractor, ASTForAudioClassification
 from utils import open_json
 from all_methods import run_all_methods, generate_data
 import shutil
+import re
 
 def setup_logging():
     """Configure logging settings"""
@@ -25,7 +26,7 @@ def load_model(model_name):
     try:
         feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
         model = ASTForAudioClassification.from_pretrained(model_name)
-        model = model.to('cuda')
+        model = model.to('cpu')
         return feature_extractor, model
     except Exception as e:
         logging.error(f"Error loading model {model_name}: {str(e)}")
@@ -53,6 +54,14 @@ def process_folder(folder,
     if os.path.isfile(full_path):
          data_generate = True
 
+    target_filename = rf'ft_.*_p{mask_percentage}_m{window_size}\.json$'
+
+    # Check if any file matches the pattern
+    
+    # for file in os.listdir(folder_path):
+    #     if re.match(target_filename, file):
+    #         return  # Exit function if any matching file is found
+        
     true_ids = folder_data['father_labels_ids'].tolist()
 
     # Get predictions 
@@ -136,7 +145,7 @@ def main():
     
     # Masking parameters to try
     mask_percentages = [0.1, 0.15, 0.2, 0.3, 0.4]
-    window_sizes = [2, 3, 4, 5, 6]
+    window_sizes = [1, 2, 3, 4, 5, 6]
     
     # Setup logging
     setup_logging()
@@ -148,7 +157,7 @@ def main():
         feature_extractor, model = load_model(MODEL_NAME)
 
         # Get first 70 folders in alphabetical order
-        all_folders = sorted(os.listdir(BASE_PATH))[20:100]
+        all_folders = sorted(os.listdir(BASE_PATH))[0:10000]
         
         # Iterate through masking parameters
         for mask_percentage in mask_percentages:
@@ -156,21 +165,25 @@ def main():
                 # Process each folder
                 for folder in tqdm(all_folders):
                     folder_path = os.path.join(BASE_PATH, folder)
+                    target_filename = f"scores_data_all_masked_p{mask_percentage}_m{window_size}.json"
+                    full_path = os.path.join(folder_path, target_filename)
                     
-                    try:
-                        process_folder(
-                            folder=folder,
-                            folder_path=folder_path,
-                            df=df,
-                            model=model,
-                            segment_length=SEGMENT_LENGTH,
-                            mask_percentage=mask_percentage,
-                            window_size=window_size,
-                            num_samples=NUM_SAMPLES
-                        )
-                    except Exception as e:
-                        logging.error(f"Error processing folder {folder}: {str(e)}")
-                        continue
+                    # Check if the exact file exists
+                    if os.path.isfile(full_path):
+                        try:
+                            process_folder(
+                                folder=folder,
+                                folder_path=folder_path,
+                                df=df,
+                                model=model,
+                                segment_length=SEGMENT_LENGTH,
+                                mask_percentage=mask_percentage,
+                                window_size=window_size,
+                                num_samples=NUM_SAMPLES
+                            )
+                        except Exception as e:
+                            logging.error(f"Error processing folder {folder}: {str(e)}")
+                            continue
 
     except Exception as e:
         logging.error(f"Fatal error in main execution: {str(e)}")
