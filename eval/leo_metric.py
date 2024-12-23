@@ -194,11 +194,16 @@ def main():
 
     args = parser.parse_args()
    
-    for mask_percentage in [0.1, 0.15, 0.2, 0.3, 0.4]:
-        for window_size in [1, 2, 3, 4, 5, 6]:
-            for method in ['shap', 'tree_importance', 'naive', 'linear_regression']:
+    # for mask_percentage in [0.1, 0.15, 0.2, 0.3, 0.4]:
+        # for window_size in [1, 2, 3, 4, 5, 6]:
+
+
+    for mask_percentage, window_size in [(0.1, 4), (0.1, 5), (0.1, 6)]:
+        for method in ['shap', 'tree_importance', 'naive', 'linear_regression']:
                 get(method, "ast", args.base_path, mask_percentage, window_size)
 
+    for method in ['linear_regression']:
+        get(method, "ast", args.base_path, 0.15, 6)
 if __name__ == '__main__':
     main()
 

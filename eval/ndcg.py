@@ -1,7 +1,7 @@
 import json
 import numpy as np
 from tqdm import tqdm
-from utils import get_patterns
+import re
 import os
 import pandas as pd
 import argparse
@@ -55,7 +55,7 @@ def process_audio_file(data, method):
     id_explained = data['metadata']['id_explained']
     segment_length = data["metadata"]['segment_length']
     filename = data["metadata"]['filename']
-    overlap = data["metadata"]['overlap']
+    overlap = 0 #data["metadata"]['overlap']
     granularidad_ms = segment_length - overlap
     times_gt = data['metadata']["true_markers"]
     
@@ -117,12 +117,11 @@ def process_audio_file(data, method):
         **ndcg_values
     }
 
-def get(method: str, base_path: str):
-    patterns = get_patterns()
+def get(method: str, base_path: str, mask_percentage, window_size):
     results = []
-    
+    pattern = re.compile(rf'ft_.*_p{mask_percentage}_m{window_size}\.json$')
     for root, _, files in tqdm(os.walk(os.path.join(base_path, 'audioset_audios_eval'))):
-        json_files = [f for pattern in patterns for f in files if pattern.match(f)]
+        json_files = [f for f in files if pattern.match(f)]
         
         for json_file in json_files:
             file_path = os.path.join(root, json_file)
@@ -137,7 +136,7 @@ def get(method: str, base_path: str):
     os.makedirs(output_dir, exist_ok=True)
     
     pred_df = pd.DataFrame(results)
-    pred_df.to_csv(os.path.join(output_dir, f'ndcg_{method}.tsv'), sep='\t', index=False)
+    pred_df.to_csv(os.path.join(output_dir, f'ndcg_{method}_p{mask_percentage}_w{window_size}.tsv'), sep='\t', index=False)
 
 def main():
     parser = argparse.ArgumentParser(description='Process AudioSet data and generate evaluation files.')
@@ -147,7 +146,9 @@ def main():
 
     args = parser.parse_args()
     for method in ['tree_importance', 'shap', 'naive', 'linear_regression']:
-        get(method, args.base_path)
+        for mask_percentage in [0.1, 0.15, 0.2, 0.3, 0.4]:
+            for window_size in [2, 3, 4, 5, 6]:
+                get(method, args.base_path, mask_percentage, window_size)
 
 if __name__ == '__main__':
     main()

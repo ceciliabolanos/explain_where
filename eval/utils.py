@@ -1,7 +1,7 @@
 import numpy as np
 import re
 
-def process_importance_values(values, segment_size=500, step_size=250):
+def process_importance_values(values, segment_size=100, step_size=100):
     """
     Process importance values using a Bartlett window approach for smoother transitions.
     
@@ -41,7 +41,3 @@ def process_importance_values(values, segment_size=500, step_size=250):
     processed_importance = accumulated_importance / overlap_count
     
     return processed_importance, timeline
-    
-
-def get_patterns():
-    return [re.compile(rf'ft_\w+\.json$')]

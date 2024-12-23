@@ -2,7 +2,7 @@
 
 import os
 import json 
-import argparse
+import re
 from utils import process_importance_values
 import numpy as np
 from tqdm import tqdm
@@ -27,7 +27,7 @@ def obtener_regiones_detectadas(data, method, segment_length, granularidad_ms, m
         values = data['importance_scores'][method]['masked']['values']
     elif method == 'naive':
         values = data['importance_scores'][method]['values']
-    elif method == 'lime':
+    elif method == 'linear_regression':
         values = data['importance_scores'][method]['masked']['values']['coefficients']
 
     importance_values, times = process_importance_values(values, segment_size=segment_length, step_size=granularidad_ms)
@@ -96,7 +96,7 @@ def evaluar_deteccion_regiones(
         return max_inside_marker(detected_regions[0], times_gt)
 
     
-def evaluate_all_folders(base_path: str, method: str, score: float, mode: str) -> dict:
+def evaluate_all_folders(base_path: str, method: str, score: float, mode: str, mask_percentage, window_size) -> dict:
     results = {
         "summary": {
             "total_files": 0,
@@ -113,10 +113,8 @@ def evaluate_all_folders(base_path: str, method: str, score: float, mode: str) -
     patterns = get_patterns()
     
     for root, dirs, files in tqdm(os.walk(os.path.join(base_path, "audioset_audios_eval"))):
-        # Filter for JSON files matching any of the patterns
-        json_files = []
-        for pattern in patterns:
-            json_files.extend([f for f in files if pattern.match(f)])
+        pattern = re.compile(rf'ft_.*_p{mask_percentage}_m{window_size}\.json$')
+        json_files = [f for f in files if pattern.match(f)]
         
         for json_file in json_files:
             file_path = os.path.join(root, json_file)
@@ -155,13 +153,13 @@ def evaluate_all_folders(base_path: str, method: str, score: float, mode: str) -
     
     return results
 
-def save_results(results: dict, base_path: str, method: str, score: float, mode):
+def save_results(results: dict, base_path: str, method: str, score: float, mode, mask_percentage, window_size):
     # Create results directory if it doesn't exist
     results_dir = os.path.join(base_path, "audioset_evaluation/max/evaluation_results")
     os.makedirs(results_dir, exist_ok=True)
     
     # Generate filename with timestamp
-    filename = f"{method}_{score}_{mode}.json"
+    filename = f"{method}_{score}_{mode}_p{mask_percentage}_m{window_size}.json"
     filepath = os.path.join(results_dir, filename)
     
     # Save results to JSON file
@@ -175,27 +173,27 @@ def main():
     for method in ['random_forest', 'naive', 'lime', 'yamnet']:
         for mode in ['global', 'marker_max']:
             for score in [-2, -1, 0, 1, 2]:
-                results = evaluate_all_folders(
-                    base_path,
-                    method,
-                    score,
-                    mode
-                )
+                 for mask_percentage in [0.1, 0.15, 0.2, 0.3, 0.4]:
+                    for window_size in [2, 3, 4, 5, 6]:
+                        results = evaluate_all_folders(
+                            base_path,
+                            method,
+                            score,
+                            mode,
+                            mask_percentage,
+                            window_size
+                        )
 
-                output_file = save_results(
-                    results,
-                    base_path,
-                    method,
-                    score,
-                    mode
-                )
-    
-                # Print summary to console
-                print("\nEvaluation Summary:")
-                print(f"Total files processed: {results['summary']['total_files']}")
-                print(f"Successful assertions: {results['summary']['successful_assertions']}")
-                print(f"Failure rate: {results['summary']['failure_rate']:.2f}%")
-                print(f"\nResults saved to: {output_file}")
+                        output_file = save_results(
+                            results,
+                            base_path,
+                            method,
+                            score,
+                            mode, 
+                            mask_percentage,
+                            window_size
+                        )
+
 
 if __name__ == "__main__":
     main()

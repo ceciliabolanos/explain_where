@@ -26,7 +26,7 @@ def load_model(model_name):
     try:
         feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
         model = ASTForAudioClassification.from_pretrained(model_name)
-        model = model.to('cpu')
+        model = model.to('cuda')
         return feature_extractor, model
     except Exception as e:
         logging.error(f"Error loading model {model_name}: {str(e)}")
