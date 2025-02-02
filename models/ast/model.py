@@ -12,12 +12,9 @@ class ASTModel():
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.feature_extractor = AutoFeatureExtractor.from_pretrained("MIT/ast-finetuned-audioset-10-10-0.4593")
         self.model = ASTForAudioClassification.from_pretrained("MIT/ast-finetuned-audioset-10-10-0.4593")
-        self.model = self.model.to(self.device)
-        ### cambiar esto
-        self.df = pd.read_csv('/home/ec2-user/IEMOCAP/partitions/iemocap_data.csv')
-        self.df.set_index(self.df.columns[0], inplace=True)
-     
-    
+        self.model.to(self.device)
+        self.model.eval()
+
     def get_predict_fn(self):
       
         def predict_fn(wav_array):
@@ -39,7 +36,7 @@ class ASTModel():
         return predict_fn
     
     def process_input(self): 
-        audio_path = f'/mnt/shared/alpha/hdd6T/Datasets/audioset_eval_wav/{self.filename}.wav'
+        audio_path = f'/home/ec2-user/Datasets/audioset_eval_wav/{self.filename}.wav'
 
         wav_data, sample_rate = sf.read(audio_path)
         if sample_rate != 16000:
@@ -47,13 +44,13 @@ class ASTModel():
         if len(wav_data.shape) > 1 and wav_data.shape[1] == 2:
             wav_data = wav_data.mean(axis=1)
 
-        inputs = self.feature_extractor(wav_data, 
+        
+        with torch.no_grad():
+            inputs = self.feature_extractor(wav_data, 
                                         sampling_rate=16000, 
                                         return_tensors="pt") 
-        
-        logits = self.model(**inputs).logits
+            inputs = {k: v.to('cuda') for k, v in inputs.items()}
+            logits = self.model(**inputs).logits
 
-        print(logits)        
-        pred_emotion = logits[0][self.id_to_explain]
-
+        pred_emotion = logits.cpu().tolist()[0][self.id_to_explain]
         return wav_data, pred_emotion

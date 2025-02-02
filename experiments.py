@@ -24,7 +24,6 @@ for mask_type in mask_types:
                                             mask_percentage=mask_percentage, 
                                             window_size=window_size,
                                             num_samples=NUM_SAMPLES, 
-                                            way_to_mask='random',
                                             function=function,
                                             mask_type=mask_type)
                 
@@ -33,6 +32,6 @@ for mask_type in mask_types:
                         filename=df.loc[i, 'base_segment_id'],
                         model_name='ast',
                         id_to_explain=df.loc[i, 'father_id_ast'],
-                        mask_config=mask_config,
+                        config=mask_config,
                     )
 

@@ -49,11 +49,11 @@ def predict_with_yamnet(filename, label):
 
 tqdm.pandas(desc="Processing AST predictions")
 
-# Process predictions
-df['score_ast'] = df.progress_apply(
-    lambda row: predict_with_ast(row['base_segment_id'], row['father_id_ast']),
-    axis=1
-)
+# # Process predictions
+# df['score_ast'] = df.progress_apply(
+#     lambda row: predict_with_ast(row['base_segment_id'], row['father_id_ast']),
+#     axis=1
+# )
 
 df['multiple_segments'] = df.apply(
     lambda row: any(not pd.isna(row[col]) for col in df.columns if col.startswith('segment_') and col != 'segment_1'),
@@ -61,9 +61,13 @@ df['multiple_segments'] = df.apply(
 )
 
 df_to_eval = df[df['score_ast'] > 0]
-df_to_eval = df_to_eval.groupby(['base_segment_id', 'score_ast']).sum('duration') 
-
+df_to_eval = df_to_eval.groupby(['base_segment_id', 'score_ast'], as_index=False).agg({
+    'duration': 'sum',  
+    'father_id_ast': 'first',  # or another function like 'max' if needed
+    'multiple_segments': 'first'  # Preserve 'multiple_segments' by taking the first value in each group
+})
 df_to_eval = df_to_eval[df_to_eval['duration'] < 5.0]
+
 
 train_df, test_df = train_test_split(
     df_to_eval, 

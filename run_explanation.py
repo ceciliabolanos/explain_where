@@ -2,16 +2,16 @@ from explainers.random_forest import RFExplainer
 from explainers.linear_regression import LRExplainer
 from explainers.naive import NaiveExplainer
 
-from data.mask_windows import WindowMaskingDataGenerator, MaskingConfig
+from data.mask_windows import WindowMaskingDataGenerator
+from data.base_generator import MaskingConfig
 
 from models.ast.model import ASTModel
-from models.yamnet.model import YAMNetModel
+# from models.yamnet.model import YAMNetModel
 
 import json
 from pathlib import Path
-import pandas as pd
 
-PATH = '/home/ec2-user/results1/explanations'
+PATH = '/home/ec2-user/results1/explanations_audioset'
 
 def generate_explanation(filename: str, 
                   model_name: str, 
@@ -20,15 +20,14 @@ def generate_explanation(filename: str,
     
     if model_name == 'ast':
        model = ASTModel(filename, id_to_explain) 
-  
-    input, id_to_explain = model.process_input()     
+
+    input, real_score_id = model.process_input()     
     predict_fn = model.get_predict_fn()   
     
     ############## Generate data ##############
     
     data_generator = WindowMaskingDataGenerator(
             model_name=model_name,
-            explanation_type = 'window',
             audio=input,
             sample_rate=16000, 
             mask_config=config,
@@ -107,7 +106,7 @@ def generate_explanation(filename: str,
     }
 
     # Save results
-    output_path = Path(PATH) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
+    output_path = Path(PATH) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"
     with open(output_path, 'w') as f:
         json.dump(output_data, f, indent=2)
 

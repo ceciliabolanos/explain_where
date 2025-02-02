@@ -120,7 +120,7 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                                                    mask_percentage=self.config.mask_percentage,
                                                    window_size=self.config.window_size)
         
-        scores, neighborhood = self.get_scores_neigh(batch_size=128, snrs=snrs)
+        scores, neighborhood = self.get_scores_neigh(batch_size=256, snrs=snrs)
         return scores, snrs, neighborhood
     
     def compute_similarity(self, temp):
