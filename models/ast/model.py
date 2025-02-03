@@ -25,7 +25,7 @@ class ASTModel():
                         for audio in wav_array]
             
             inputs = {
-                k: torch.cat([inp[k] for inp in inputs_list]).to("cuda")
+                k: torch.cat([inp[k] for inp in inputs_list]).to(self.device)
                 for k in inputs_list[0].keys()
             }
             with torch.no_grad():
@@ -49,7 +49,7 @@ class ASTModel():
             inputs = self.feature_extractor(wav_data, 
                                         sampling_rate=16000, 
                                         return_tensors="pt") 
-            inputs = {k: v.to('cuda') for k, v in inputs.items()}
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
             logits = self.model(**inputs).logits
 
         pred_emotion = logits.cpu().tolist()[0][self.id_to_explain]

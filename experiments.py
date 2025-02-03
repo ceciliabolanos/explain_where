@@ -2,14 +2,14 @@ import pandas as pd
 from tqdm import tqdm
 from run_explanation import generate_explanation
 from data.base_generator import MaskingConfig
-
+import os 
 
 LABELS_PATH = '/home/ec2-user/Datasets/Audioset/labels/audioset_eval_train.csv'
 SEGMENT_LENGTH = 100
-NUM_SAMPLES = 3300
+NUM_SAMPLES = 3000
 
 # Masking parameters to try
-mask_percentages = [0.1, 0.15, 0.2, 0.3, 0.4]
+mask_percentages = [0.1, 0.2, 0.3, 0.4]
 window_sizes = [1, 2, 3, 4, 5]
 functions = ['euclidean', 'cosine', 'dtw'] 
 mask_types = ['zeros', 'noise', 'stat']
@@ -26,12 +26,13 @@ for mask_type in mask_types:
                                             num_samples=NUM_SAMPLES, 
                                             function=function,
                                             mask_type=mask_type)
-                
+                j =0
                 for i in tqdm(range(len(df))):
-                    generate_explanation(
-                        filename=df.loc[i, 'base_segment_id'],
-                        model_name='ast',
-                        id_to_explain=df.loc[i, 'father_id_ast'],
-                        config=mask_config,
-                    )
-
+                    if j < 138 and (not os.path.exists(f'/home/ec2-user/results1/explanations_audioset/{df.loc[i, "base_segment_id"]}/ast/scores_w{window_size}_m{mask_type}.json')):
+                        generate_explanation(
+                            filename=df.loc[i, 'base_segment_id'],
+                            model_name='ast',
+                            id_to_explain=df.loc[i, 'father_id_ast'],
+                            config=mask_config,
+                        )
+                    j=j+1
