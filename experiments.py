@@ -16,8 +16,8 @@ mask_types = ['zeros', 'noise', 'stat']
 
 df = pd.read_csv(LABELS_PATH)
 
-for mask_type in mask_types:
-    for function in functions:     
+for function in functions:     
+    for mask_type in mask_types:
         for window_size in window_sizes: 
             for mask_percentage in mask_percentages:
                 mask_config = MaskingConfig(segment_length=SEGMENT_LENGTH, 
@@ -28,7 +28,7 @@ for mask_type in mask_types:
                                             mask_type=mask_type)
                 j =0
                 for i in tqdm(range(len(df))):
-                    if j < 138 and (not os.path.exists(f'/home/ec2-user/results1/explanations_audioset/{df.loc[i, "base_segment_id"]}/ast/scores_w{window_size}_m{mask_type}.json')):
+                    if j < 138 and (not os.path.exists(f'/home/ec2-user/results1/explanations_audioset/{df.loc[i, "base_segment_id"]}/ast/scores_p{mask_config.mask_percentage}_w{mask_config.window_size}_f{mask_config.function}_m{mask_config.mask_type}.json')):
                         generate_explanation(
                             filename=df.loc[i, 'base_segment_id'],
                             model_name='ast',

@@ -45,7 +45,7 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                 masked_audio[current_pos:end] = np.random.normal(np.mean(self.input), noise_std, end - current_pos)
 
             elif self.config.mask_type == "stat":
-                fill_value = np.mean(self.input)
+                fill_value = np.mean(self.input[current_pos:end])
                 masked_audio[current_pos:end] = fill_value 
 
             prediction = self.predict_fn([masked_audio])
