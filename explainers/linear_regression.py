@@ -97,16 +97,8 @@ class Explanation:
         self.score = None
         self.local_pred = None
 
-    def get_feature_importances(self, label):
-        """
-        Get feature importance scores and their statistical significance.
-        
-        Args:
-            label (int): Target label.
-            
-        Returns:
-            dict: Dictionary containing coefficient values and their p-values.
-        """
+    def get_feature_importances(self):
+
         exp = self.local_exp
         
         return {
