@@ -39,7 +39,9 @@ class BaseDataGenerator(ABC):
                  mode: str = 'naive_masked',
                  config: MaskingConfig = None,
                  input: Any = None, 
-                 predict_fn: Any = None):
+                 predict_fn: Any = None,
+                 filename: str = None,
+                 id_to_explain: int = None):
         """
         Base class for data perturbation generators.
         
@@ -54,8 +56,8 @@ class BaseDataGenerator(ABC):
         self.config = config
         self.predict_fn = predict_fn
         self.input = input
-        self.filename = None
-        self.id_to_explain = None
+        self.filename = filename
+        self.id_to_explain = id_to_explain
 
     @abstractmethod
     def _generate_naive_masked(self) -> Any:
