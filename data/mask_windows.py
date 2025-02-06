@@ -4,6 +4,10 @@ import numpy as np
 from typing import Optional, Callable
 from scipy.spatial.distance import euclidean, cosine
 from fastdtw import fastdtw 
+import json
+from pathlib import Path
+
+PATH = '/home/ec2-user/results1/explanations_audioset'
 
 class WindowMaskingDataGenerator(BaseDataGenerator):
     """Generator for audio data with masking windows"""
@@ -20,7 +24,6 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                         predict_fn=predict_fn)
         self.sr = sample_rate
 
-    
     def _generate_naive_masked(self):
         mask_samples = int(self.sr * (self.config.segment_length / 1000))
         windows = self.config.window_size
@@ -55,6 +58,55 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
             current_pos += step_samples
                 
         return results
+
+
+    def _generate_greedy_masked(self, id_to_explain):
+        n_components = len(self.segment_signal(self.input))
+        mask_samples = int(self.sr * (self.config.segment_length / 1000))
+        windows = self.config.window_size
+        overlap_samples = int(self.sr * (self.config.overlap / 1000))
+                
+        results_importance = []
+        step_samples = mask_samples - overlap_samples
+        prediction_original = self.predict_fn([masked_audio])[0][id_to_explain]
+        new_masked_audio = np.copy(self.input)
+
+        while len(results_importance) < n_components:
+            results = []
+            current_pos = 0
+            masked_audio = np.copy(new_masked_audio)
+            while current_pos < len(self.input):
+                end = min(current_pos + mask_samples, len(self.input))
+                if self.config.mask_type == "zeros":
+                    masked_audio[current_pos:end] = 0
+
+                elif self.config.mask_type == "noise":
+                    noise_std = np.random.uniform(0.01, 0.1)
+                    masked_audio[current_pos:end] = np.random.normal(np.mean(self.input), noise_std, end - current_pos)
+
+                elif self.config.mask_type == "stat":
+                    fill_value = np.mean(self.input[current_pos:end])
+                    masked_audio[current_pos:end] = fill_value 
+
+                prediction = self.predict_fn([masked_audio])[0]
+                results.append(prediction) 
+                current_pos += step_samples
+
+            differences = [(prediction_original - result) for result in results]
+            max_diff_index = differences.index(max(differences))
+            results_importance.append(max_diff_index)
+            end = min(mask_samples * (max_diff_index+1), len(self.input))
+
+            if self.config.mask_type == "zeros":
+                new_masked_audio[mask_samples * max_diff_index:end] = 0
+            elif self.config.mask_type == "noise":
+                noise_std = np.random.uniform(0.01, 0.1)
+                new_masked_audio[mask_samples * max_diff_index:end] = np.random.normal(np.mean(self.input), noise_std, end - mask_samples * max_diff_index)
+            elif self.config.mask_type == "stat":
+                fill_value = np.mean(self.input[current_pos:end])
+                new_masked_audio[mask_samples * max_diff_index:end] = fill_value 
+
+        return results_importance
 
     def segment_signal(self, S):
         """
@@ -113,16 +165,35 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
         return output
 
 
-    def _generate_all_masked(self):
-        n_components = len(self.segment_signal(self.input))
-        snrs = self.generate_specific_combinations(n_components=n_components, 
+    def _generate_all_masked(self, filename):
+        if self.config.function == "euclidean":
+            n_components = len(self.segment_signal(self.input))
+    
+            snrs = self.generate_specific_combinations(n_components=n_components, 
                                                    num_samples=self.config.num_samples, 
                                                    mask_percentage=self.config.mask_percentage,
                                                    window_size=self.config.window_size)
         
-        scores, neighborhood = self.get_scores_neigh(batch_size=256, snrs=snrs)
-        return scores, snrs, neighborhood
+            scores, neighborhood = self.get_scores_neigh(batch_size=256, snrs=snrs)
     
+        else:
+            output_file = Path(PATH) / filename / self.model_name / f"scores_p{self.config.mask_percentage}_w{self.config.window_size}_feuclidean_m{self.config.mask_type}.json"
+            with open(output_file, 'r') as json_file:
+                data = json.load(json_file)
+            scores = data["scores"]
+            snrs = data["snrs"]
+            neighborhood = self.get_neighborhood(snrs)
+
+        return scores, snrs, neighborhood
+        
+    def get_neighborhood(self, snrs=None):
+        neighborhood = []
+        
+        for row in snrs:
+            temp = self.create_masked_input(row)
+            neighborhood.append(self.compute_similarity(temp)) 
+        return neighborhood    
+        
     def compute_similarity(self, temp):
         similarity_functions = {
             "euclidean": euclidean,

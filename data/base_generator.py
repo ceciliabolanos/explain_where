@@ -54,6 +54,8 @@ class BaseDataGenerator(ABC):
         self.config = config
         self.predict_fn = predict_fn
         self.input = input
+        self.filename = None
+        self.id_to_explain = None
 
     @abstractmethod
     def _generate_naive_masked(self) -> Any:
@@ -67,7 +69,11 @@ class BaseDataGenerator(ABC):
     def _generate_all_masked(self) -> Any:
         """A naive masking approach masked one at the time the measure selected (e.g token, word, specific window)"""
         pass
-    
+
+    @abstractmethod
+    def _generate_greedy_masked(self) -> Any:
+        pass
+
     @abstractmethod
     def create_masked_input(self) -> Any:
         """
@@ -88,7 +94,7 @@ class BaseDataGenerator(ABC):
 
         # Elegimos al azar una cantidad de ventanas que enmascaramos
         if self.mode == 'all_masked':
-            scores, snrs, neighborhood = self._generate_all_masked()
+            scores, snrs, neighborhood = self._generate_all_masked(self.filename)
         
             data_to_save = {
                 "scores": scores,
@@ -96,13 +102,24 @@ class BaseDataGenerator(ABC):
                 "score_real": self.predict_fn([self.input])[0],
                 "snrs" : snrs
             }
-            
+        if self.mode == 'greedy_masked':
+            scores = self._generate_greedy_masked(self.id_to_explain)
+        
+            data_to_save = {
+                "scores": scores,
+                "neighborhood": None,
+                "score_real": self.predict_fn([self.input])[0],
+                "snrs" : None
+            }
+
         if self.mode == 'all_masked':
             output_file = Path(PATH) / filename / self.model_name / f"scores_p{self.config.mask_percentage}_w{self.config.window_size}_f{self.config.function}_m{self.config.mask_type}.json"
+        elif self.mode == 'greedy_masked':
+            output_file = Path(PATH) / filename / self.model_name / f"scores_w{self.config.window_size}_m{self.config.mask_type}_greedy.json"
         else:
             output_file = Path(PATH) / filename / self.model_name / f"scores_w{self.config.window_size}_m{self.config.mask_type}.json"
-        os.makedirs(os.path.dirname(output_file), exist_ok=True)
         
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
         with open(output_file, 'w') as json_file:
             json.dump(data_to_save, json_file)    
     
