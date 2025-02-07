@@ -8,6 +8,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.animation import FuncAnimation, writers
 import scipy.io.wavfile as wav
 import json
+import pandas as pd
 
 def open_json(file_path):
     """
@@ -45,6 +46,27 @@ def process_importance_values(values, segment_size=100, step_size=100):
     
     return processed_importance, timeline
 
+
+def get_segments(base_segment_id, label):
+    # Filter DataFrame for the given base_segment_id and label
+    df = pd.read_csv("/home/ec2-user/Datasets/Audioset/labels/audioset_eval.csv")  # Adjust path if necessary
+
+    filtered_df = df[(df['base_segment_id'] == base_segment_id) & (df['father_id_ast'] == label)]
+    
+    if filtered_df.empty:
+        return []  # Return empty list if no matching row is found
+    
+    # Select columns that start with "segment_"
+    segment_columns = [col for col in df.columns if col.startswith("segment_")]
+    
+    # Extract non-null segment values and parse lists
+    segment_lists = []
+    for col in segment_columns:
+        value = filtered_df[col].values[0]  # Get the value
+        if isinstance(value, str) and value.startswith("["):  # Ensure it's a list-like string
+            segment_lists.append(ast.literal_eval(value))  # Convert to actual list
+    
+    return segment_lists
 
 def read_and_process_importance_scores(file_path):
     """
