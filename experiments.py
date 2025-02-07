@@ -9,14 +9,19 @@ SEGMENT_LENGTH = 100
 NUM_SAMPLES = 3000
 
 # Masking parameters to try
+
+# functions = ['euclidean', 'cosine', 'dtw']
+# mask_percentages = [0.1, 0.2, 0.3, 0.4]
+# window_sizes = [1, 2, 3, 4, 5]
+# mask_types = ['zeros', 'stat', 'noise']
+
+functions = ['euclidean', 'cosine', 'dtw']
 mask_percentages = [0.1, 0.2, 0.3, 0.4]
 window_sizes = [1, 2, 3, 4, 5]
-functions = ['euclidean', 'cosine', 'dtw'] 
-mask_types = ['zeros', 'noise', 'stat']
-
+mask_types = ['zeros']
 df = pd.read_csv(LABELS_PATH)
 
-for function in functions:     
+for function in functions:
     for mask_type in mask_types:
         for window_size in window_sizes: 
             for mask_percentage in mask_percentages:
@@ -28,11 +33,13 @@ for function in functions:
                                             mask_type=mask_type)
                 j =0
                 for i in tqdm(range(len(df))):
-                    if j < 138 and (not os.path.exists(f'/home/ec2-user/results1/explanations_audioset/{df.loc[i, "base_segment_id"]}/ast/scores_p{mask_config.mask_percentage}_w{mask_config.window_size}_f{mask_config.function}_m{mask_config.mask_type}.json')):
+                    filename = df.loc[i, 'base_segment_id']
+                    id = df.loc[i, 'father_id_ast']
+                    if j < 138:
                         generate_explanation(
-                            filename=df.loc[i, 'base_segment_id'],
+                            filename=filename,
                             model_name='ast',
-                            id_to_explain=df.loc[i, 'father_id_ast'],
+                            id_to_explain=id,
                             config=mask_config,
                         )
                     j=j+1
