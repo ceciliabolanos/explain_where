@@ -10,8 +10,6 @@ SEED = 42
 np.random.seed(SEED)
 random.seed(SEED)
 
-PATH = '/home/ec2-user/results1/explanations_audioset'
-
 class MaskingConfig:
     """Configuration for masking parameters."""
 
@@ -41,7 +39,8 @@ class BaseDataGenerator(ABC):
                  input: Any = None, 
                  predict_fn: Any = None,
                  filename: str = None,
-                 id_to_explain: int = None):
+                 id_to_explain: int = None,
+                 path: str = None):
         """
         Base class for data perturbation generators.
         
@@ -58,6 +57,7 @@ class BaseDataGenerator(ABC):
         self.input = input
         self.filename = filename
         self.id_to_explain = id_to_explain
+        self.path = path
 
     @abstractmethod
     def _generate_naive_masked(self) -> Any:
@@ -73,10 +73,6 @@ class BaseDataGenerator(ABC):
         pass
 
     @abstractmethod
-    def _generate_greedy_masked(self) -> Any:
-        pass
-
-    @abstractmethod
     def create_masked_input(self) -> Any:
         """
         Given a list of 1s and 0s we generate the input masked 
@@ -85,7 +81,6 @@ class BaseDataGenerator(ABC):
         pass
 
     def generate(self, filename):
-        # Elegimos una ventana y le ponemos valor cero 
         if self.mode == 'naive_masked':
             data_to_save = {
             "scores": self._generate_naive_masked(),
@@ -104,22 +99,22 @@ class BaseDataGenerator(ABC):
                 "score_real": self.predict_fn([self.input])[0],
                 "snrs" : snrs
             }
-        if self.mode == 'greedy_masked':
-            scores = self._generate_greedy_masked(self.id_to_explain)
+        # if self.mode == 'greedy_masked':
+        #     scores = self._generate_greedy_masked(self.id_to_explain)
         
-            data_to_save = {
-                "scores": scores,
-                "neighborhood": None,
-                "score_real": self.predict_fn([self.input])[0],
-                "snrs" : None
-            }
+        #     data_to_save = {
+        #         "scores": scores,
+        #         "neighborhood": None,
+        #         "score_real": self.predict_fn([self.input])[0],
+        #         "snrs" : None
+        #     }
 
         if self.mode == 'all_masked':
-            output_file = Path(PATH) / filename / self.model_name / f"scores_p{self.config.mask_percentage}_w{self.config.window_size}_f{self.config.function}_m{self.config.mask_type}.json"
-        elif self.mode == 'greedy_masked':
-            output_file = Path(PATH) / filename / self.model_name / f"scores_w{self.config.window_size}_m{self.config.mask_type}_greedy.json"
+            output_file = Path(self.path) / filename / self.model_name / f"scores_p{self.config.mask_percentage}_w{self.config.window_size}_f{self.config.function}_m{self.config.mask_type}.json"
+        # elif self.mode == 'greedy_masked':
+        #     output_file = Path(PATH) / filename / self.model_name / f"scores_w{self.config.window_size}_m{self.config.mask_type}_greedy.json"
         else:
-            output_file = Path(PATH) / filename / self.model_name / f"scores_w{self.config.window_size}_m{self.config.mask_type}.json"
+            output_file = Path(self.path) / filename / self.model_name / f"scores_w{self.config.window_size}_m{self.config.mask_type}.json"
         
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
         with open(output_file, 'w') as json_file:

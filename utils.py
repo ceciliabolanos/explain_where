@@ -9,6 +9,8 @@ from matplotlib.animation import FuncAnimation, writers
 import scipy.io.wavfile as wav
 import json
 import pandas as pd
+import ast
+
 
 def open_json(file_path):
     """
