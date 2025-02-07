@@ -45,8 +45,8 @@ class LimeBase:
         """
         # Calculate and normalize kernel weights
         weights = self.kernel_fn(distances)
-        weights = np.maximum(weights, 1e-8)
-        weights = weights / np.sum(weights)
+        # weights = np.maximum(weights, 1e-8)
+        # weights = weights / np.sum(weights)
         
         # Setup local model
         if model_regressor is None:
@@ -124,7 +124,7 @@ class LRExplainer:
         if kernel is None:
             def kernel(d, kernel_width):
                 return np.sqrt(np.exp(-(d ** 2) / kernel_width ** 2))
-                
+                 
         self.kernel_fn = partial(kernel, kernel_width=float(kernel_width))
         self.random_state = check_random_state(random_state)
         self.base = LimeBase(self.kernel_fn, verbose, absolute_feature_sort,

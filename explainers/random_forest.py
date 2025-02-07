@@ -13,6 +13,10 @@ class RFExplainer:
     def __init__(self, path, filename):
         self.path = path
         self.filename = filename
+        self.kernel_width = 0.25
+
+    def kernel(self, d):
+        return np.sqrt(np.exp(-(d ** 2) / self.kernel_width ** 2))
 
     def get_feature_importances(self, label_to_explain, method='tree'):
         with open(self.path, 'r') as file:
@@ -22,8 +26,11 @@ class RFExplainer:
         for score in data['scores']:
             y.append(score[label_to_explain])
 
+        distances = data['neighborhood']
+        weights = self.kernel(distances)
+       
         RFModel = RandomForestRegressor(n_estimators=100, n_jobs=16)  
-        RFModel.fit(data['snrs'], y, sample_weight=data['neighborhood'])
+        RFModel.fit(data['snrs'], y, sample_weight=weights)
 
         if method == 'tree':
             importances = RFModel.feature_importances_
@@ -41,5 +48,5 @@ class RFExplainer:
         return importances
     
 
-            
 
+        
