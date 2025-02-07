@@ -16,12 +16,16 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                 audio: np.ndarray,
                 sample_rate: int,
                 mask_config: MaskingConfig,
-                predict_fn: Optional[Callable] = None):
+                predict_fn: Optional[Callable] = None, 
+                filename: str = None,
+                id_to_explain: int = None):
         
         super().__init__(model_name=model_name,
                         config=mask_config,
                         input=audio,
-                        predict_fn=predict_fn)
+                        predict_fn=predict_fn,
+                        filename=filename,
+                        id_to_explain=id_to_explain)
         self.sr = sample_rate
 
     def _generate_naive_masked(self):
@@ -68,7 +72,7 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                 
         results_importance = []
         step_samples = mask_samples - overlap_samples
-        prediction_original = self.predict_fn([masked_audio])[0][id_to_explain]
+        prediction_original = self.predict_fn([self.input])[0][id_to_explain]
         new_masked_audio = np.copy(self.input)
 
         while len(results_importance) < n_components:
@@ -88,11 +92,11 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                     fill_value = np.mean(self.input[current_pos:end])
                     masked_audio[current_pos:end] = fill_value 
 
-                prediction = self.predict_fn([masked_audio])[0]
+                prediction = self.predict_fn([masked_audio])[0][id_to_explain]
                 results.append(prediction) 
                 current_pos += step_samples
 
-            differences = [(prediction_original - result) for result in results]
+            differences = [(prediction_original - i) for i in results]
             max_diff_index = differences.index(max(differences))
             results_importance.append(max_diff_index)
             end = min(mask_samples * (max_diff_index+1), len(self.input))
