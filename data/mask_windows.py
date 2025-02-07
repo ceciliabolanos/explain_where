@@ -57,8 +57,6 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
 
             prediction = self.predict_fn([masked_audio])
             results.append(prediction[0]) #.cpu().detach().numpy().tolist()
-    
-            # Move to next position, starting the new mask before the current one ends
             current_pos += step_samples
                 
         return results
@@ -69,46 +67,57 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
         mask_samples = int(self.sr * (self.config.segment_length / 1000))
         windows = self.config.window_size
         overlap_samples = int(self.sr * (self.config.overlap / 1000))
-                
+        
         results_importance = []
         step_samples = mask_samples - overlap_samples
-        prediction_original = self.predict_fn([self.input])[0][id_to_explain]
+        
         new_masked_audio = np.copy(self.input)
+        processed_segments = set()
 
         while len(results_importance) < n_components:
             results = []
             current_pos = 0
+            prediction_original = self.predict_fn([new_masked_audio])[0][id_to_explain]
             masked_audio = np.copy(new_masked_audio)
+            
             while current_pos < len(self.input):
+                masked_audio = np.copy(new_masked_audio)
                 end = min(current_pos + mask_samples, len(self.input))
+
+                if current_pos in processed_segments:
+                    current_pos += step_samples
+                    continue
+                
                 if self.config.mask_type == "zeros":
                     masked_audio[current_pos:end] = 0
-
                 elif self.config.mask_type == "noise":
                     noise_std = np.random.uniform(0.01, 0.1)
                     masked_audio[current_pos:end] = np.random.normal(np.mean(self.input), noise_std, end - current_pos)
-
                 elif self.config.mask_type == "stat":
                     fill_value = np.mean(self.input[current_pos:end])
-                    masked_audio[current_pos:end] = fill_value 
-
+                    masked_audio[current_pos:end] = fill_value
+                
+                # Get the prediction for the masked audio
                 prediction = self.predict_fn([masked_audio])[0][id_to_explain]
-                results.append(prediction) 
+                results.append((current_pos, prediction))
                 current_pos += step_samples
+            
+            # Find the segment with the maximum difference
+            differences = [(pos, prediction_original - pred) for pos, pred in results]
+            max_diff_pos, max_diff = max(differences, key=lambda x: x[1])
+            # Mark this segment as processed
+            processed_segments.add(max_diff_pos)
+            results_importance.append(int(max_diff_pos/step_samples))
 
-            differences = [(prediction_original - i) for i in results]
-            max_diff_index = differences.index(max(differences))
-            results_importance.append(max_diff_index)
-            end = min(mask_samples * (max_diff_index+1), len(self.input))
-
+            end = min(max_diff_pos + mask_samples, len(self.input))
             if self.config.mask_type == "zeros":
-                new_masked_audio[mask_samples * max_diff_index:end] = 0
+                new_masked_audio[max_diff_pos:end] = 0
             elif self.config.mask_type == "noise":
                 noise_std = np.random.uniform(0.01, 0.1)
-                new_masked_audio[mask_samples * max_diff_index:end] = np.random.normal(np.mean(self.input), noise_std, end - mask_samples * max_diff_index)
+                new_masked_audio[max_diff_pos:end] = np.random.normal(np.mean(self.input), noise_std, end - max_diff_pos)
             elif self.config.mask_type == "stat":
-                fill_value = np.mean(self.input[current_pos:end])
-                new_masked_audio[mask_samples * max_diff_index:end] = fill_value 
+                fill_value = np.mean(self.input[max_diff_pos:end])
+                new_masked_audio[max_diff_pos:end] = fill_value
 
         return results_importance
 
