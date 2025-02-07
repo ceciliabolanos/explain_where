@@ -8,10 +8,9 @@ def pi_x_for_list(vectors):
     results = []
     for x in vectors:
         m = len(x)
-        z = sum(x)  # Number of ones in the vector
-
+        z = sum(x) 
         if z == 0 or z == m:
-            results.append(0)  # Avoid division by zero in edge cases
+            results.append(0) 
             continue
 
         binom_mz = comb(m, z)
@@ -82,23 +81,19 @@ class KernelShapExplainer:
         if random_seed is None:
             random_seed = self.random_state.randint(0, high=1000)
 
-        # Load and prepare data
         with open(self.path, 'r') as file:
             data = json.load(file)
 
         y = [score[label_to_explain] for score in data['scores']]
         y = np.array(y)
         
-        distances = np.array(data['snrs'])
+        distances = data['snrs']
         
-        # Create and populate explanation object
         explanation = Explanation(np.array(data['snrs']), y)
 
         explanation.intercept, explanation.local_exp, explanation.score, explanation.local_pred = \
             self.base.explain_instance_with_data(
-                np.array(data['snrs']), y, distances, label_to_explain,
-                model_regressor=model_regressor, alpha=1e-7
-            )
+                np.array(data['snrs']), y, distances, model_regressor=model_regressor)
 
 
         return explanation
