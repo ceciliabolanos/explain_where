@@ -32,6 +32,6 @@ for mask_type in mask_types:
                         model_name='cough',
                         id_to_explain=1,
                         config=mask_config,
-                        path='/home/ec2-user/results1/explanations_cough'
+                        path='/home/cbolanos/results1/explanations_cough'
                     )
                 j=j+1
