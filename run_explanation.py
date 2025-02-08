@@ -10,6 +10,7 @@ from data.base_generator import MaskingConfig
 from models.ast.model import ASTModel
 from models.cough.model import CoughModel
 from models.drums.model import DrumsModel
+from models.kws.model import KWSModel
 
 from utils import get_segments
 import os
@@ -31,6 +32,10 @@ def generate_explanation(filename: str,
 
     if model_name == 'drums':
        model = DrumsModel(filename, id_to_explain) 
+       filename = os.path.basename(filename)
+    
+    if model_name == 'kws':
+       model = KWSModel(filename, id_to_explain) 
        filename = os.path.basename(filename)
     
     input, real_score_id = model.process_input()     
@@ -105,7 +110,7 @@ def generate_explanation(filename: str,
     #     label_to_explain=id_to_explain
     # ).get_feature_importances()
     
-    # true_markers = get_segments(filename, id_to_explain)
+    # true_markers = get_segments(filename, id_to_explain, model)
 
     # ############## Prepare output ##############
     # output_data = {

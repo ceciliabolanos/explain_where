@@ -57,17 +57,17 @@ class UpstreamDownstreamModel(pl.LightningModule):
         else:
             raise ValueError('Unknown downstream_type {}'.format(self.downstream_type))
         
-class CoughModel():
+class KWSModel():
     def __init__(self, audio_path, id_to_explain: int):
         self.id_to_explain = id_to_explain
         self.audio_path = audio_path
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = UpstreamDownstreamModel(upstream='wav2vec2', 
                                    num_layers=13, 
-                                   num_classes=4,
+                                   num_classes=1,
                                    hidden_sizes=[256])
 
-        checkpoint = torch.load('/home/cbolanos/interpretability-benchmarks/checkpoints/iemocap-cough-1340.ckpt')['state_dict']
+        checkpoint = torch.load('interpretability-benchmarks/checkpoints/librispeech-kws-step2200.ckpt')['state_dict']
         new_state_dict = {k.replace("mlp", "downstream"): v for k, v in checkpoint.items()}
         self.model.load_state_dict(new_state_dict)
         self.model.to(self.device)
@@ -91,11 +91,9 @@ class CoughModel():
         return predict_fn
     
     def process_input(self):
-        # Load audio file
         x, fs = sf.read(self.audio_path)
         x = x.astype(np.float32)
         
-        # Prepare input dictionary
         xin = {
             'wav': torch.from_numpy(x)[None, :],
             'wav_lens': torch.tensor([x.shape[0]])
@@ -105,7 +103,6 @@ class CoughModel():
             inputs = {k: v.to(self.device) for k, v in xin.items()}
             logits = self.model(inputs)
         
-        # Extract predicted emotion
         pred_emotion = logits.cpu().tolist()[0][self.id_to_explain]
         
         return x, pred_emotion
