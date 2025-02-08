@@ -65,7 +65,7 @@ def get_segments(base_segment_id, label, model):
     if model == 'cough':
         df = pd.read_csv("/home/cbolanos/explain_where/models/cough/cough_happy.csv")
         filtered_df = df[df['filename'] == base_segment_id]
-        segment_lists = [filtered_df['cough_start']/16000, filtered_df['cough_end']/16000]
+        segment_lists = [[filtered_df['cough_start'][0]/16000, filtered_df['cough_end'][0]/16000]]
     if model == 'drums':
         df = pd.read_csv("/home/cbolanos/explain_where/models/drums/drums_dataset.csv")
         filtered_df = df[df['filename'] == base_segment_id]
@@ -81,8 +81,7 @@ def get_segments(base_segment_id, label, model):
     if model == 'kws':
         df = pd.read_csv("/home/cbolanos/explain_where/models/kws/kws_dataset.csv")
         filtered_df = df[df['filename'] == base_segment_id]
-        print(filtered_df)
-        segment_lists = [filtered_df['word_start'], filtered_df['word_end']]
+        segment_lists = [[filtered_df['word_start'][0], filtered_df['word_end'][0]]]
     return segment_lists
     
 
