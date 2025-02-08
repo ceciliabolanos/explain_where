@@ -5,7 +5,7 @@ from data.base_generator import MaskingConfig
 import os 
 import torch
 
-LABELS_PATH = '/home/cbolanos/explain_where/models/cough/cough_happy.csv'
+LABELS_PATH = '/home/cbolanos/explain_where/models/drums/drums_dataset.csv'
 SEGMENT_LENGTH = 100
 NUM_SAMPLES = 3000
 
@@ -27,13 +27,14 @@ for mask_type in mask_types:
             j =0
             for i in tqdm(range(len(df))):
                 filename = df.loc[i, 'filename']
+                id = df.loc[i, 'num_kicks']
                 if j < 50:
                     generate_explanation(
                         filename=filename,
-                        model_name='cough',
-                        id_to_explain=1,
+                        model_name='drums',
+                        id_to_explain=id,
                         config=mask_config,
-                        path='/home/cbolanos/results1/explanations_cough'
+                        path='/home/cbolanos/results1/explanations_drums'
                     )
                 torch.cuda.empty_cache()
                 del filename

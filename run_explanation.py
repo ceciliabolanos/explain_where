@@ -8,6 +8,8 @@ from data.mask_windows import WindowMaskingDataGenerator
 from data.base_generator import MaskingConfig
 
 from models.ast.model import ASTModel
+from models.cough.model import CoughModel
+from models.drums.model import DrumsModel
 
 from utils import get_segments
 import os
@@ -23,6 +25,14 @@ def generate_explanation(filename: str,
     if model_name == 'ast':
        model = ASTModel(filename, id_to_explain) 
 
+    if model_name == 'cough':
+       model = CoughModel(filename, id_to_explain) 
+       filename = os.path.basename(filename)
+
+    if model_name == 'drums':
+       model = DrumsModel(filename, id_to_explain) 
+       filename = os.path.basename(filename)
+    
     input, real_score_id = model.process_input()     
     predict_fn = model.get_predict_fn()   
     
