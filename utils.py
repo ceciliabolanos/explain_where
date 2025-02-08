@@ -49,26 +49,41 @@ def process_importance_values(values, segment_size=100, step_size=100):
     return processed_importance, timeline
 
 
-def get_segments(base_segment_id, label):
-    # Filter DataFrame for the given base_segment_id and label
-    df = pd.read_csv("/home/ec2-user/Datasets/Audioset/labels/audioset_eval.csv")  # Adjust path if necessary
+def get_segments(base_segment_id, label, model):
+    if model == 'ast':
+        df = pd.read_csv("/home/ec2-user/Datasets/Audioset/labels/audioset_eval.csv")  # Adjust path if necessary
+        filtered_df = df[(df['base_segment_id'] == base_segment_id) & (df['father_id_ast'] == label)]
+        if filtered_df.empty:
+            return []  
+        segment_columns = [col for col in df.columns if col.startswith("segment_")]
+        segment_lists = []
+        for col in segment_columns:
+            value = filtered_df[col].values[0]  
+            if isinstance(value, str) and value.startswith("["):  
+                segment_lists.append(ast.literal_eval(value))  
+        
+    if model == 'cough':
+        df = pd.read_csv("/home/cbolanos/explain_where/models/cough/cough_happy.csv")
+        filtered_df = df[df['filename'] == base_segment_id]
+        segment_lists = [filtered_df['cough_start']/16000, filtered_df['cough_end']/16000]
+    if model == 'drums':
+        df = pd.read_csv("/home/cbolanos/explain_where/models/drums/drums.csv")
+        filtered_df = df[df['filename'] == base_segment_id]
+        pattern = filtered_df['pattern']
+        durations = filtered_df['durations']
+        actual_samples = 0
+        segment_lists = []
+        for p, d in zip(pattern, durations):
+            if p == 'K':
+                segment_lists.append([actual_samples / 16000, (actual_samples + d) / 16000])
+            actual_samples += d
 
-    filtered_df = df[(df['base_segment_id'] == base_segment_id) & (df['father_id_ast'] == label)]
-    
-    if filtered_df.empty:
-        return []  # Return empty list if no matching row is found
-    
-    # Select columns that start with "segment_"
-    segment_columns = [col for col in df.columns if col.startswith("segment_")]
-    
-    # Extract non-null segment values and parse lists
-    segment_lists = []
-    for col in segment_columns:
-        value = filtered_df[col].values[0]  # Get the value
-        if isinstance(value, str) and value.startswith("["):  # Ensure it's a list-like string
-            segment_lists.append(ast.literal_eval(value))  # Convert to actual list
-    
+    if model == 'kws':
+        df = pd.read_csv("/home/cbolanos/explain_where/models/kws/kws.csv")
+        filtered_df = df[df['filename'] == base_segment_id]
+        segment_lists = [filtered_df['word_start'], filtered_df['word_end']]
     return segment_lists
+    
 
 def read_and_process_importance_scores(file_path):
     """

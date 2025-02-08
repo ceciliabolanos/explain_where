@@ -25,17 +25,21 @@ def generate_explanation(filename: str,
     
     if model_name == 'ast':
        model = ASTModel(filename, id_to_explain) 
+       complete_filename = filename
 
     if model_name == 'cough':
        model = CoughModel(filename, id_to_explain) 
+       complete_filename = filename
        filename = os.path.basename(filename)
 
     if model_name == 'drums':
        model = DrumsModel(filename, id_to_explain) 
+       complete_filename = filename
        filename = os.path.basename(filename)
     
     if model_name == 'kws':
        model = KWSModel(filename, id_to_explain) 
+       complete_filename = filename
        filename = os.path.basename(filename)
     
     input, real_score_id = model.process_input()     
@@ -110,7 +114,7 @@ def generate_explanation(filename: str,
     #     label_to_explain=id_to_explain
     # ).get_feature_importances()
     
-    # true_markers = get_segments(filename, id_to_explain, model)
+    # true_markers = get_segments(complete_filename, id_to_explain, model)
 
     # ############## Prepare output ##############
     # output_data = {
