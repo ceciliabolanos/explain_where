@@ -45,8 +45,8 @@ class LimeBase:
         """
         # Calculate and normalize kernel weights
         weights = self.kernel_fn(distances)
-        # weights = np.maximum(weights, 1e-8)
-        # weights = weights / np.sum(weights)
+        weights = np.maximum(weights, 1e-8)
+        weights = weights / np.sum(weights)
         
         # Setup local model
         if model_regressor is None:

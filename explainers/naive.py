@@ -12,6 +12,7 @@ class NaiveExplainer:
     def __init__(self, filename, path):
         self.filename = filename
         self.path = path
+
     def get_feature_importance(self, label_to_explain):
         with open(self.path, 'r') as file:
             data = json.load(file)
