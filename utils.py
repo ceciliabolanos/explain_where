@@ -50,13 +50,13 @@ def process_importance_values(values, segment_size=100, step_size=100):
 
 
 def get_segments(base_segment_id, label, model):
+    segment_lists = []
     if model == 'ast':
         df = pd.read_csv("/home/ec2-user/Datasets/Audioset/labels/audioset_eval.csv")  # Adjust path if necessary
         filtered_df = df[(df['base_segment_id'] == base_segment_id) & (df['father_id_ast'] == label)]
         if filtered_df.empty:
             return []  
         segment_columns = [col for col in df.columns if col.startswith("segment_")]
-        segment_lists = []
         for col in segment_columns:
             value = filtered_df[col].values[0]  
             if isinstance(value, str) and value.startswith("["):  
@@ -65,14 +65,16 @@ def get_segments(base_segment_id, label, model):
     if model == 'cough':
         df = pd.read_csv("/home/cbolanos/explain_where/models/cough/cough_happy.csv")
         filtered_df = df[df['filename'] == base_segment_id]
+        filtered_df = filtered_df.reset_index(drop=True)
         segment_lists = [[filtered_df['cough_start'][0]/16000, filtered_df['cough_end'][0]/16000]]
+    
     if model == 'drums':
         df = pd.read_csv("/home/cbolanos/explain_where/models/drums/drums_dataset.csv")
         filtered_df = df[df['filename'] == base_segment_id]
+        filtered_df = filtered_df.reset_index(drop=True)
         pattern = filtered_df['pattern'].values[0]  # Get the string directly
         durations = ast.literal_eval(filtered_df['durations'].values[0])  # Assuming durations are a valid Python literal
         actual_samples = 0
-        segment_lists = []
         for p, d in zip(pattern, durations):
             if p == 'K':
                 segment_lists.append([actual_samples / 16000, (actual_samples + d) / 16000])
@@ -81,7 +83,9 @@ def get_segments(base_segment_id, label, model):
     if model == 'kws':
         df = pd.read_csv("/home/cbolanos/explain_where/models/kws/kws_dataset.csv")
         filtered_df = df[df['filename'] == base_segment_id]
-        segment_lists = [[filtered_df['word_start'][0], filtered_df['word_end'][0]]]
+        filtered_df = filtered_df.reset_index(drop=True)
+        segment_lists = [[filtered_df['word_start'].loc[0], filtered_df['word_end'].loc[0]]]
+    
     return segment_lists
     
 
