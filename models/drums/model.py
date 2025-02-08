@@ -68,7 +68,7 @@ class DrumsModel():
                                    hidden_sizes=[128],
                                    lstm_size=256)
 
-        self.model.load_state_dict('/home/cbolanos/interpretability-benchmarks/checkpoints/drums-step15000.ckpt')
+        self.model.load_state_dict(torch.load('/home/cbolanos/interpretability-benchmarks/checkpoints/drums-step15000.ckpt')['state_dict'])
         self.model.to(self.device)
         self.model.eval()
 

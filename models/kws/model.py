@@ -67,7 +67,7 @@ class KWSModel():
                                    num_classes=1,
                                    hidden_sizes=[256])
 
-        checkpoint = torch.load('interpretability-benchmarks/checkpoints/librispeech-kws-step2200.ckpt')['state_dict']
+        checkpoint = torch.load('/home/cbolanos/interpretability-benchmarks/checkpoints/librispeech-kws-step2200.ckpt')['state_dict']
         new_state_dict = {k.replace("mlp", "downstream"): v for k, v in checkpoint.items()}
         self.model.load_state_dict(new_state_dict)
         self.model.to(self.device)
