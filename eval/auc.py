@@ -7,7 +7,6 @@ import pandas as pd
 import argparse
 from sklearn.metrics import roc_curve, auc
 
-
 def time_in_segmentation(max_index, list_of_tuples, granularidad_ms):
     interval_start = max_index
     interval_end = max_index + granularidad_ms/1000
@@ -17,22 +16,18 @@ def time_in_segmentation(max_index, list_of_tuples, granularidad_ms):
         intersection_start = max(interval_start, tuple_start)
         intersection_end = min(interval_end, tuple_end)
         
-        # If there is an intersection, check its duration
         if intersection_end > intersection_start:
             intersection_duration = intersection_end - intersection_start
-            if intersection_duration >= 0.09:
+            if intersection_duration >= 0.06:
                 return 1 # capaz intesection deberia ser el resultado
     return 0
-
 
 def generate_sequence(length):
     return [i * 0.1 for i in range(length)]
 
-
 def create_segmentation_vector(times_gt, times, granularidad_ms): 
-    # Initialize result vectors
     real_vector = np.zeros(len(times))
-    
+
     for i in range(len(real_vector)):
         real_vector[i] = time_in_segmentation(times[i], times_gt, granularidad_ms)
     
@@ -42,20 +37,21 @@ def create_segmentation_vector(times_gt, times, granularidad_ms):
 def process_audio_file(data, method):
     segment_length = data["metadata"]['segment_length']
     filename = data["metadata"]['filename']
-    overlap = 0 #data["metadata"]['overlap']
+    overlap = 0 
     granularidad_ms = segment_length - overlap
     times_gt = data['metadata']["true_markers"]
     
     # Get importance scores
     if method == 'tree_importance':
-        values = data['importance_scores']['random_forest'][method]['values']
+        values = data['importance_scores']['random_forest_tree_importance']['values']
     elif method == 'shap':
-        values = data['importance_scores']['random_forest'][method]['values']
+        values = data['importance_scores']['random_forest_shap_importance']['values']
     elif method == 'naive':
-        values = data['importance_scores'][method]['values']
+        values = data['importance_scores']['naive']['values']
     elif method == 'linear_regression':
-        values = data['importance_scores'][method]['masked']['values']['coefficients']
-   
+        values = data['importance_scores']['linear_regression']['values']['coefficients']
+    elif method == 'kernel_shap':
+        values = data['importance_scores']['kernel_shap']['values']['coefficients']
     times = generate_sequence(len(values))
     
     times_segmentation = create_segmentation_vector(times_gt, times, granularidad_ms)
@@ -83,16 +79,17 @@ def process_audio_file(data, method):
 
     return {
         'filename': filename,
-        'event_label': data['metadata']['label_explained'],
+        'event_label': data['metadata']['id_explained'],
         'actual_score': data['metadata']['true_score'],
-        **order_segmentation_values
+        **order_segmentation_values,
+        'true_markers': times_gt,
     }
 
-def get(method: str, mask_percentage, window_size, base_path: str, option: str):
+def get(method: str, mask_percentage, window_size, mask_type, function, base_path: str, dataset):
     results = []
     
-    for root, _, files in tqdm(os.walk(os.path.join(base_path, 'audioset_audios_eval'))):
-        pattern = re.compile(rf'ft_.*_p{mask_percentage}_m{window_size}\.json$')
+    for root, _, files in tqdm(os.walk(os.path.join(base_path, f'explanations_{dataset}'))):
+        pattern = re.compile(rf'ft_.*_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}\.json$')
         json_files = [f for f in files if pattern.match(f)]
         
         for json_file in json_files:
@@ -103,36 +100,35 @@ def get(method: str, mask_percentage, window_size, base_path: str, option: str):
             result = process_audio_file(data, method)
             results.append(result)
         
-    # Save results
-    output_dir = os.path.join(base_path, f'audioset_evaluation/auc/{option}')
+    output_dir = os.path.join(f'evaluations/{dataset}/')
     os.makedirs(output_dir, exist_ok=True)
     
     pred_df = pd.DataFrame(results)
-    if option == 'hyperparams':
-        pred_df.to_csv(os.path.join(output_dir, f'order_{method}_p{mask_percentage}_m{window_size}.tsv'), sep='\t', index=False)
-    elif option == 'selection_criteria':
-        pred_df.to_csv(os.path.join(output_dir, f'order_{method}_p{mask_percentage}_m{window_size}_final.tsv'), sep='\t', index=False)
-
-
+    pred_df.to_csv(os.path.join(output_dir, f'order_{method}_p{mask_percentage}_f{function}_m{mask_type}.tsv'), sep='\t', index=False)
 
 def main():
     parser = argparse.ArgumentParser(description='Process AudioSet data and generate evaluation files.')
     parser.add_argument('--base_path', type=str,
-                      default='/home/cbolanos/experiments',
+                      default='/home/ec2-user/results1',
                       help='Base path for AudioSet experiments')
-    parser.add_argument('--option', type=str, default='hyperparams',
-                      help='Option to run: hyperparams or selection_criteria')
     args = parser.parse_args()
-       
-    if args.option == 'hyperparams':
-        for mask_percentage in [0.1, 0.15, 0.2, 0.3, 0.4]:
-            for window_size in [1, 2, 3, 4, 5, 6]:
-                for method in ['tree_importance', 'shap', 'naive', 'linear_regression']:
-                    get(method, mask_percentage, window_size, args.base_path, args.option)
 
+    # for function in ['euclidean', 'cosine', 'dtw']:
+    #     for mask_type in ['zeros', 'stat', 'noise']:
+    #         for mask_percentage in [0.1, 0.2, 0.3, 0.4]:
+    #             for window_size in [1, 2, 3, 4, 5]:
+    #                 for method in ['tree_importance', 'shap', 'naive', 'linear_regression', 'greedy', 'kernel_shap']:
+    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset')
+    
+    # cough 
+    for function in ['euclidean', 'cosine', 'dtw']:
+        for mask_type in ['zeros', 'stat', 'noise']:
+            for mask_percentage in [0.2, 0.3, 0.4]:
+                for window_size in [1, 3, 5]:
+                    for method in ['tree_importance', 'shap', 'naive', 'linear_regression', 'kernel_shap']:
+                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'cough')
 
 if __name__ == '__main__':
     main()
 
-    
     

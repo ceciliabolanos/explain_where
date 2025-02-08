@@ -68,7 +68,9 @@ def generate_explanation(filename: str,
         data_generator.generate(filename)
 
     ######### Generate the importances for each method ##########
-   
+    output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"
+    if os.path.exists(output_path):
+        return 
     # Naive analysis
     print('Running Naive analysis...')
     naive_analyzer = NaiveExplainer(
@@ -143,7 +145,7 @@ def generate_explanation(filename: str,
     }
 
     # Save results
-    output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"
+   
     with open(output_path, 'w') as f:
         json.dump(output_data, f, indent=2)
 
