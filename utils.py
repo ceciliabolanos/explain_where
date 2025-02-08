@@ -67,10 +67,10 @@ def get_segments(base_segment_id, label, model):
         filtered_df = df[df['filename'] == base_segment_id]
         segment_lists = [filtered_df['cough_start']/16000, filtered_df['cough_end']/16000]
     if model == 'drums':
-        df = pd.read_csv("/home/cbolanos/explain_where/models/drums/drums.csv")
+        df = pd.read_csv("/home/cbolanos/explain_where/models/drums/drums_dataset.csv")
         filtered_df = df[df['filename'] == base_segment_id]
-        pattern = filtered_df['pattern']
-        durations = filtered_df['durations']
+        pattern = filtered_df['pattern'].values[0]  # Get the string directly
+        durations = ast.literal_eval(filtered_df['durations'].values[0])  # Assuming durations are a valid Python literal
         actual_samples = 0
         segment_lists = []
         for p, d in zip(pattern, durations):
@@ -79,8 +79,9 @@ def get_segments(base_segment_id, label, model):
             actual_samples += d
 
     if model == 'kws':
-        df = pd.read_csv("/home/cbolanos/explain_where/models/kws/kws.csv")
+        df = pd.read_csv("/home/cbolanos/explain_where/models/kws/kws_dataset.csv")
         filtered_df = df[df['filename'] == base_segment_id]
+        print(filtered_df)
         segment_lists = [filtered_df['word_start'], filtered_df['word_end']]
     return segment_lists
     

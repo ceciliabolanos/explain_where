@@ -1,10 +1,9 @@
 import torch
-import soundfile as sf
 import pytorch_lightning as pl
 from s3prl.nn import S3PRLUpstream
 import torchmetrics
 import numpy as np
-
+import librosa
 
 class UpstreamDownstreamModel(pl.LightningModule):
     def __init__(self, upstream, num_layers=13, hidden_sizes=[128], num_classes=4, downstream='mlp', lstm_size=None):
@@ -91,7 +90,7 @@ class DrumsModel():
     
     def process_input(self):
         # Load audio file
-        x, fs = sf.read(self.audio_path)
+        x, fs = librosa.core.load(self.audio_path, sr=16000)
         x = x.astype(np.float32)
         
         xin = {
