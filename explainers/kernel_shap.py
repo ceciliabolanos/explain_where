@@ -12,33 +12,16 @@ def pi_x_for_list(vectors):
         m = len(x)
         z = sum(x) 
         if z == 0 or z == m:
-            results.append(0) 
+            results.append(10000) 
             continue
 
         binom_mz = comb(m, z)
         result = (m - 1) / (binom_mz * z * (m - z))
         results.append(result)
-    
-    return results
 
-class ConstrainedLogisticRegression(LinearRegression):
-    def __init__(self, empty_set_pred, full_set_pred, **kwargs):
-        super().__init__(**kwargs)
-        self.empty_set_pred = empty_set_pred  # f_x(∅)
-        
-    def fit(self, X, y, sample_weight=None):
-        # Set intercept to match empty set prediction
-        self.intercept_ = self.empty_set_pred
-        
-        super().fit(X, y, sample_weight=sample_weight)
-        
-        # Calculate last coefficient to satisfy sum constraint
-        sum_other_coefs = np.sum(self.coef_[:-1])
-        last_coef = self.full_set_pred - (self.intercept_ + sum_other_coefs)
-        
-        # Add last coefficient
-        self.coef_ = np.append(self.coef_, last_coef)
-        return self
+    mean_result = sum(results) / len(results) if results else 1  # Avoid division by zero
+    normalized_results = [r / mean_result for r in results]
+    return normalized_results
 
 class KernelBase:
     def __init__(self, verbose=False, absolute_feature_sort=False, random_state=None):
@@ -49,12 +32,22 @@ class KernelBase:
     def explain_instance_with_data(self, neighborhood_data, neighborhood_labels, 
                                  distances, empty_score):
         
-        weights = pi_x_for_list(distances[1:])      
+        weights = pi_x_for_list(distances[1:]) 
+        # model_regressor = LinearRegression(fit_intercept=True)
+
+        # # Fit local model
+        # features = range(neighborhood_data.shape[1])
+        # model_regressor.fit(neighborhood_data[1:, features], 
+        #                     neighborhood_labels[1:], 
+        #                     sample_weight=weights)
+        
+        # local_pred = model_regressor.predict(neighborhood_data[0, features].reshape(1, -1))
+        
         b0 = empty_score
         features = range(neighborhood_data.shape[1])
 
         X = neighborhood_data[1:, features]
-        y = neighborhood_labels[1:] - b0  # Adjust labels to remove fixed intercept
+        y = neighborhood_labels[1:] 
         weights = np.array(weights)  # Ensure weights are in array format
         b_eq = [neighborhood_labels[0]]
         # Define objective function (Weighted Least Squares)
@@ -71,10 +64,14 @@ class KernelBase:
 
         local_pred = np.dot(neighborhood_data[0, features], constrained_coeffs) + b0
 
+        
         return (b0,
                 constrained_coeffs,
                 local_pred)
 
+        # return (model_regressor.intercept_,
+        #         model_regressor.coef_,
+        #         local_pred)
 class Explanation:
     """Container for audio explanation results."""
     

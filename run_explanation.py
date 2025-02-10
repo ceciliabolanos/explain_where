@@ -2,7 +2,6 @@ from explainers.random_forest import RFExplainer
 from explainers.linear_regression import LRExplainer
 from explainers.naive import NaiveExplainer
 from explainers.kernel_shap import KernelShapExplainer
-from explainers.greedy import GreedyExplainer
 
 from data.mask_windows import WindowMaskingDataGenerator
 from data.base_generator import MaskingConfig
@@ -67,11 +66,11 @@ def generate_explanation(filename: str,
     if not os.path.exists(Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"):
         data_generator.generate(filename)
 
-    ######### Generate the importances for each method ##########
+    # ######### Generate the importances for each method ##########
     output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"
-    if os.path.exists(output_path):
-        return 
-    # Naive analysis
+    # # if os.path.exists(output_path):
+    # #     return 
+    # # Naive analysis
     print('Running Naive analysis...')
     naive_analyzer = NaiveExplainer(
         path= Path(path) / filename / model_name / f"scores_w1_m{config.mask_type}.json",

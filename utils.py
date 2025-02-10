@@ -107,7 +107,7 @@ def read_and_process_importance_scores(file_path):
         # Extract metadata
         metadata = {
             'filename': data['metadata']['filename'],
-            'label_explained': data['metadata']['label_explained']
+            'label_explained': data['metadata']['id_explained']
         }
         
         # Process importance scores
@@ -118,37 +118,34 @@ def read_and_process_importance_scores(file_path):
             },
             'random_forest': {
                 'tree_importance': {
-                    'method': data['importance_scores']['random_forest']['tree_importance']['method'],
-                    'original_values': np.array(data['importance_scores']['random_forest']['tree_importance']['values'])
+                    'method': data['importance_scores']['random_forest_tree_importance']['method'],
+                    'original_values': np.array(data['importance_scores']['random_forest_tree_importance']['values'])
                 },
                 'shap': {
-                    'method': data['importance_scores']['random_forest']['shap']['method'],
-                    'original_values': np.array(data['importance_scores']['random_forest']['shap']['values'])
+                    'method': data['importance_scores']['random_forest_shap_importance']['method'],
+                    'original_values': np.array(data['importance_scores']['random_forest_shap_importance']['values'])
                 }
             },
             'linear_regression': {
-                'masked': {
-                    'method': data['importance_scores']['linear_regression']['masked']['method'],
-                    'original_values': np.array(data['importance_scores']['linear_regression']['masked']['values']['coefficients'])
-                },
+                    'method': data['importance_scores']['linear_regression']['method'],
+                    'original_values': np.array(data['importance_scores']['linear_regression']['values']['coefficients'])
+            },
+             'kernel_shap': {
+                    'method': data['importance_scores']['kernel_shap']['method'],
+                    'original_values': np.array(data['importance_scores']['kernel_shap']['values']['coefficients'])
             }
         }
         
-        # Process naive scores
-        processed_scores['naive']['processed_values'], processed_scores['naive']['time_points'] = \
-            process_importance_values(processed_scores['naive']['original_values'])
+        for key in ['naive', 'linear_regression', 'kernel_shap']:
+            processed_scores[key]['processed_values'], processed_scores[key]['time_points'] = \
+                process_importance_values(processed_scores[key]['original_values'])
         
         # Process random forest scores
         for key in ['tree_importance', 'shap']:
             processed_scores['random_forest'][key]['processed_values'], \
             processed_scores['random_forest'][key]['time_points'] = \
                 process_importance_values(processed_scores['random_forest'][key]['original_values'])
-        
-        # Process linear_regression scores
-        for key in ['masked']:
-            processed_scores['linear_regression'][key]['processed_values'], \
-            processed_scores['linear_regression'][key]['time_points'] = \
-                process_importance_values(processed_scores['linear_regression'][key]['original_values'])
+    
         
         return {
             'metadata': metadata,
@@ -168,7 +165,7 @@ def read_and_process_importance_scores(file_path):
         print(f"Error: An unexpected error occurred: {e}")
         return None
     
-def create_waveform_video_with_importances(waveform, scores_yamnet, class_index, processed_scores, output_file, 
+def create_waveform_video_with_importances(waveform, processed_scores, output_file, 
                                          sample_rate=16000, fps=30, markers=None):
     """
     Create a video visualization of a waveform with multiple importance value plots
@@ -220,43 +217,35 @@ def create_waveform_video_with_importances(waveform, scores_yamnet, class_index,
             1,  # tree (masked, random forest)
             1,  # shap (masked, random forest)
             1,  # linear regression (masked, noise)
+            1,
+            1  # kernel shap (masked, noise)
         ])
         
         # Create figure and axes
-        fig, axes = plt.subplots(n_importance_plots + 2, 1, figsize=(12, 3*n_importance_plots), 
-                                gridspec_kw={'height_ratios': [1]*n_importance_plots +  [2, 2]},
+        fig, axes = plt.subplots(n_importance_plots, 1, figsize=(12, 3*n_importance_plots), 
+                                gridspec_kw={'height_ratios': [1]*n_importance_plots},
                                 sharex=True)
         
         importance_data = []
 
-
-        # Add naive importance values
-        naive_values = processed_scores['naive']['processed_values']
-        naive_times = processed_scores['naive']['time_points']
-        importance_data.append(('Naive', naive_values, naive_times))
-        
-        # Add Random Forest importance values
+        for key in ['kernel_shap', 'linear_regression', 'naive']:
+            lime_values = processed_scores[key]['processed_values']
+            lime_times = processed_scores[key]['time_points']
+            importance_data.append((f'{key}', lime_values, lime_times))
+    
         for key in ['tree_importance', 'shap']:
             rf_values = processed_scores['random_forest'][key]['processed_values']
             rf_times = processed_scores['random_forest'][key]['time_points']
             importance_data.append((f'Random Forest ({key})', rf_values, rf_times))
-        
-        # Add LIME importance values
-        for key in ['masked']:
-            lime_values = processed_scores['linear_regression'][key]['processed_values']
-            lime_times = processed_scores['linear_regression'][key]['time_points']
-            importance_data.append((f'Linear Regression ({key})', lime_values, lime_times))
+                
 
         for idx, (title, values, time_points) in enumerate(importance_data):
             ax = axes[idx]
             
-            # Plot the importance values as a line
             ax.plot(time_points, values, 'k-', linewidth=1, color='black')
             
-            # Fill between the line and zero
             ax.fill_between(time_points, values, 0, alpha=0.2, color='gray')
             
-            # Calculate dynamic y-axis limits with padding
             y_min = min(0, values.min())  # Include 0 in range
             y_max = values.max()
             padding = (y_max - y_min) * 0.1  # Add 10% padding
@@ -278,31 +267,10 @@ def create_waveform_video_with_importances(waveform, scores_yamnet, class_index,
                     # Add vertical lines with stronger color
                     ax.axvline(x=start, color=color, linestyle='-', alpha=0.7, linewidth=2)
                     ax.axvline(x=end, color=color, linestyle='--', alpha=0.7, linewidth=2)
-                    
-        ################ recently added
-        ax_scores = axes[-2]
-        class_scores = scores_yamnet[:, class_index]
-        print(class_scores)
-        score_times = np.linspace(0, len(waveform)/sample_rate, len(class_scores))
-        
-        # Plot the class scores as a line
-        ax_scores.plot(score_times, class_scores, color='blue', linewidth=2)
-        ax_scores.fill_between(score_times, class_scores, 0, alpha=0.2, color='blue')
-        
-        # Calculate dynamic y-axis limits with padding for scores
-        score_min = min(0, class_scores.min())
-        score_max = class_scores.max()
-        score_padding = (score_max - score_min) * 0.1
-        
-        ax_scores.set_ylim(score_min - score_padding, score_max + score_padding)
-        ax_scores.grid(True, alpha=0.3)
-        ax_scores.set_title(f'Yamnet')
-        ax_scores.set_ylabel('Score')
-        ax_scores.set_xlabel('Time (seconds)')
       
         ax_waveform = axes[-1]
-        lc = LineCollection(segments, cmap=cmap, norm=plt.Normalize(naive_values.min(), naive_values.max()))
-        lc.set_array(naive_values[:-1])  # Using naive importance for coloring
+        lc = LineCollection(segments, cmap=cmap, norm=plt.Normalize(lime_values.min(), lime_values.max()))
+        lc.set_array(lime_values[:-1])  # Using naive importance for coloring
         lc.set_linewidth(1.5)
         
         ax_waveform.add_collection(lc)
@@ -371,7 +339,7 @@ def create_waveform_video_with_importances(waveform, scores_yamnet, class_index,
         print(f"Final video with audio saved as {output_file}")
 
 
-def create_visualization(waveform, scores_yamnet, class_index, json_file, output_file, markers=None):
+def create_visualization(waveform, json_file, output_file, markers=None):
     """
     Create a complete visualization from audio and JSON files
     
@@ -385,8 +353,6 @@ def create_visualization(waveform, scores_yamnet, class_index, json_file, output
 
     create_waveform_video_with_importances(
         waveform=waveform,
-        scores_yamnet=scores_yamnet,
-        class_index=class_index,
         processed_scores=processed_data['processed_scores'],
         output_file=output_file,
         sample_rate=16000,
