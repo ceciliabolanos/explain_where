@@ -101,7 +101,7 @@ class DrumsModel():
         with torch.no_grad():
             inputs = {k: v.to(self.device) for k, v in xin.items()}
             logits = self.model(inputs)
-        
+
         pred_emotion = logits.cpu().tolist()[0][self.id_to_explain]
         
         return x, pred_emotion
