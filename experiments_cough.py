@@ -10,8 +10,8 @@ SEGMENT_LENGTH = 100
 NUM_SAMPLES = 3000
 
 mask_percentages = [0.2, 0.3, 0.4]
-window_sizes = [1, 3, 5]
-mask_types = ['zeros', 'stat', 'noise']
+window_sizes = [5, 1, 3]
+mask_types = ['stat', 'noise', 'zeros']
 
 df = pd.read_csv(LABELS_PATH)
 

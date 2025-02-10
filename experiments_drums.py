@@ -11,7 +11,7 @@ NUM_SAMPLES = 3000
 
 mask_percentages = [0.2, 0.3, 0.4]
 window_sizes = [1, 3, 5]
-mask_types = ['zeros', 'stat', 'noise']
+mask_types = ['noise', 'zeros', 'stat']
 
 df = pd.read_csv(LABELS_PATH)
 
