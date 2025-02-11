@@ -99,20 +99,9 @@ class BaseDataGenerator(ABC):
                 "score_real": self.predict_fn([self.input])[0],
                 "snrs" : snrs
             }
-        # if self.mode == 'greedy_masked':
-        #     scores = self._generate_greedy_masked(self.id_to_explain)
-        
-        #     data_to_save = {
-        #         "scores": scores,
-        #         "neighborhood": None,
-        #         "score_real": self.predict_fn([self.input])[0],
-        #         "snrs" : None
-        #     }
 
         if self.mode == 'all_masked':
             output_file = Path(self.path) / filename / self.model_name / f"scores_p{self.config.mask_percentage}_w{self.config.window_size}_f{self.config.function}_m{self.config.mask_type}.json"
-        # elif self.mode == 'greedy_masked':
-        #     output_file = Path(PATH) / filename / self.model_name / f"scores_w{self.config.window_size}_m{self.config.mask_type}_greedy.json"
         else:
             output_file = Path(self.path) / filename / self.model_name / f"scores_w{self.config.window_size}_m{self.config.mask_type}.json"
         
