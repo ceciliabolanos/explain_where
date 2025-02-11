@@ -17,10 +17,17 @@ class RandomDataGenerator:
         
     def process_random_file(self):
         # Step 1: Get list of all JSON files
+        filename = os.path.basename(self.filename)
+        output_file = (
+                Path(self.path) / filename / self.model_name /
+                f"scores_{self.name}.json"
+            )
+        if os.path.exists(output_file):
+            return
         scores = []
         neighborhood = []
         snrs = []
-        filename = os.path.basename(self.filename)
+        
  
         for i in range(self.num_samples):
             window_size = random.choice(self.possible_windows)
@@ -53,10 +60,7 @@ class RandomDataGenerator:
         }
 
         # Step 6: Save the new file
-        output_file = (
-                Path(self.path) / filename / self.model_name /
-                f"scores_{self.name}.json"
-            )
+ 
         output_file.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
 
         with open(output_file, "w") as f:

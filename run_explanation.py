@@ -68,15 +68,16 @@ def generate_explanation(filename: str,
 
     # ######### Generate the importances for each method ##########
     output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"
-    # # if os.path.exists(output_path):
-    # #     return 
+
+    if os.path.exists(output_path):
+        return 
     # # Naive analysis
     print('Running Naive analysis...')
-    naive_analyzer = NaiveExplainer(
-        path= Path(path) / filename / model_name / f"scores_w1_m{config.mask_type}.json",
-        filename=filename
-    )
-    importances_naive = naive_analyzer.get_feature_importance(label_to_explain=id_to_explain)
+    # naive_analyzer = NaiveExplainer(
+    #     path= Path(path) / filename / model_name / f"scores_w1_m{config.mask_type}.json",
+    #     filename=filename
+    # )
+    # importances_naive = naive_analyzer.get_feature_importance(label_to_explain=id_to_explain)
 
     print('Running Kernel Shap...')
     kernelshap_analyzer = KernelShapExplainer(
@@ -93,7 +94,7 @@ def generate_explanation(filename: str,
         filename=filename,
     )
     importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
-    importances_rf_shap = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='shap')
+    # importances_rf_shap = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='shap')
 
     # LR analysis
     print('Running Linear Regression analysis...')
@@ -120,17 +121,113 @@ def generate_explanation(filename: str,
             "true_score": real_score_id
         },
         "importance_scores": {
-            "naive": {
-                "method": "NaiveAudioAnalyzer",
-                "values": importances_naive.tolist() if hasattr(importances_naive, 'tolist') else importances_naive
-            },
+            # "naive": {
+            #     "method": "NaiveAudioAnalyzer",
+            #     "values": importances_naive.tolist() if hasattr(importances_naive, 'tolist') else importances_naive
+            # },
             "random_forest_tree_importance": {
                     "method": "masked rf with tree importance",
                     "values": importances_rf_tree.tolist() if hasattr(importances_rf_tree, 'tolist') else importances_rf_tree
             },
-            "random_forest_shap_importance": {
-                "method": "masked rf with shap importance",
-                "values": importances_rf_shap.tolist() if hasattr(importances_rf_shap, 'tolist') else importances_rf_shap
+            # "random_forest_shap_importance": {
+            #     "method": "masked rf with shap importance",
+            #     "values": importances_rf_shap.tolist() if hasattr(importances_rf_shap, 'tolist') else importances_rf_shap
+            # },
+            "linear_regression": {
+                "method": "Linear Regression with kernel as pi",
+                "values": importances_lime.tolist() if hasattr(importances_lime, 'tolist') else importances_lime
+            },
+            "kernel_shap": {
+                "method": "Linear Regression with shap as pi",
+                "values": importances_kernelshap.tolist() if hasattr(importances_kernelshap, 'tolist') else importances_kernelshap  
+            }
+        }
+    }
+
+    # Save results
+   
+    with open(output_path, 'w') as f:
+        json.dump(output_data, f, indent=2)
+
+    print(f"Importance scores saved to: {output_path}")
+
+    return 
+
+
+def generate_explanation_from_file(filename: str, 
+                  model_name: str, 
+                  id_to_explain: int,
+                  name: str,
+                  path: str):
+    
+    if model_name == 'ast':
+       model = ASTModel(filename, id_to_explain) 
+       complete_filename = filename
+
+    if model_name == 'cough':
+       model = CoughModel(filename, id_to_explain) 
+       complete_filename = filename
+       filename = os.path.basename(filename)
+
+    if model_name == 'drums':
+       model = DrumsModel(filename, id_to_explain) 
+       complete_filename = filename
+       filename = os.path.basename(filename)
+    
+    if model_name == 'kws':
+       model = KWSModel(filename, id_to_explain) 
+       complete_filename = filename
+       filename = os.path.basename(filename)
+    
+    output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_{name}.json"
+    if os.path.exists(output_path):
+        return 
+    
+    input, real_score_id = model.process_input()     
+    predict_fn = model.get_predict_fn()   
+    pred_zeros = predict_fn([np.zeros(len(input))])[0]
+
+    # ######### Generate the importances for each method ##########
+    print('Running Kernel Shap...')
+    kernelshap_analyzer = KernelShapExplainer(
+        path= Path(path) / filename / model_name / f"scores_{name}.json",
+    )
+    importances_kernelshap = kernelshap_analyzer.explain_instance(
+        label_to_explain=id_to_explain, empty_score=pred_zeros[id_to_explain]
+    ).get_feature_importances()
+
+    # Random Forest analysis    
+    print('Running Random Forest analysis...')
+    rf_analyzer = RFExplainer(
+        path= Path(path) / filename / model_name / f"scores_{name}.json",
+        filename=filename,
+    )
+    importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
+    # LR analysis
+    print('Running Linear Regression analysis...')
+    lime_analyzer = LRExplainer(
+        Path(path) / filename / model_name / f"scores_{name}.json",
+        verbose=False,
+        absolute_feature_sort=False
+    )
+    importances_lime = lime_analyzer.explain_instance(
+        label_to_explain=id_to_explain
+    ).get_feature_importances()
+    
+    true_markers = get_segments(complete_filename, id_to_explain, model_name)
+    ############## Prepare output ##############
+    output_data = {
+        "metadata": {
+            "filename": filename,
+            "segment_length": 100,
+            "id_explained": float(id_to_explain),
+            "true_markers": true_markers,
+            "true_score": real_score_id
+        },
+        "importance_scores": {
+            "random_forest_tree_importance": {
+                    "method": "masked rf with tree importance",
+                    "values": importances_rf_tree.tolist() if hasattr(importances_rf_tree, 'tolist') else importances_rf_tree
             },
             "linear_regression": {
                 "method": "Linear Regression with kernel as pi",
