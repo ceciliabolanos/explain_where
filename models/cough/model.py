@@ -67,7 +67,7 @@ class CoughModel():
                                    num_classes=4,
                                    hidden_sizes=[256])
 
-        checkpoint = torch.load('/home/cbolanos/interpretability-benchmarks/checkpoints/iemocap-cough-1340.ckpt')['state_dict']
+        checkpoint = torch.load('/home/ec2-user/Models/iemocap-cough-1340.ckpt')['state_dict']
         new_state_dict = {k.replace("mlp", "downstream"): v for k, v in checkpoint.items()}
         self.model.load_state_dict(new_state_dict)
         self.model.to(self.device)
