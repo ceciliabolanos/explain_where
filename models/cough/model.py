@@ -92,7 +92,7 @@ class CoughModel():
     
     def process_input(self):
         # Load audio file
-        x, fs = sf.read(self.audio_path)
+        x, fs = sf.read(f'/home/ec2-user/{self.audio_path}')
         x = x.astype(np.float32)
         
         # Prepare input dictionary

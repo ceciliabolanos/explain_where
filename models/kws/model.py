@@ -91,7 +91,7 @@ class KWSModel():
         return predict_fn
     
     def process_input(self):
-        x, fs = librosa.core.load(self.audio_path, sr=16000)
+        x, fs = librosa.core.load(f'/home/ec2-user/{self.audio_path}', sr=16000)
         x = x.astype(np.float32)
         
         xin = {

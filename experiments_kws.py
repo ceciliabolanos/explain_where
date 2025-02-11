@@ -7,8 +7,7 @@ from run_explanation import generate_explanation, generate_explanation_from_file
 from data.base_generator import MaskingConfig
 from data.random_generator import RandomDataGenerator
 
-
-LABELS_PATH = '/home/cbolanos/explain_where/models/kws/kws_dataset.csv'
+LABELS_PATH = '/home/ec2-user/explain_where/models/kws/kws_dataset.csv'
 SEGMENT_LENGTH = 100
 NUM_SAMPLES = 3000
 
@@ -18,31 +17,7 @@ mask_types = ['noise', 'zeros', 'stat']
 
 df = pd.read_csv(LABELS_PATH)
 
-# for mask_type in mask_types:
-#     for window_size in window_sizes: 
-#         for mask_percentage in mask_percentages:
-#             mask_config = MaskingConfig(segment_length=SEGMENT_LENGTH, 
-#                                         mask_percentage=mask_percentage, 
-#                                         window_size=window_size,
-#                                         num_samples=NUM_SAMPLES, 
-#                                         function='euclidean',
-#                                         mask_type=mask_type)
-#             j =0
-#             for i in tqdm(range(len(df))):
-#                 filename = df.loc[i, 'filename']
-#                 if j < 50:
-#                     generate_explanation(
-#                         filename=filename,
-#                         model_name='kws',
-#                         id_to_explain=0,
-#                         config=mask_config,
-#                         path='/home/cbolanos/results1/explanations_kws'
-#                     )
-#                 torch.cuda.empty_cache()
-#                 del filename
-#                 j=j+1
-
-j =0
+j = 0
 names = ['zeros_random', 'stat_random', 'noise_random', 'random']
 possible_types = [['zeros'], ['stat'], ['noise'], ['zeros', 'stat', 'noise']]
 
@@ -51,7 +26,7 @@ for i in tqdm(range(len(df))):
         filename = df.loc[i, 'filename']
         if j < 50:
             random_data = RandomDataGenerator(
-                path='/home/cbolanos/results1/explanations_kws', 
+                path='/home/ec2-user/results1/explanations_kws', 
                 model_name='kws',
                 filename=filename,
                 windows=window_sizes,
@@ -66,5 +41,31 @@ for i in tqdm(range(len(df))):
                       model_name='kws', 
                       id_to_explain=0,
                       name=name,
-                      path='/home/cbolanos/results1/explanations_kws')
-        j=j+1
+                      path='/home/ec2-user/results1/explanations_kws')
+            print('Done')
+    j=j+1
+
+#### Uncomment this code to generate explanations for the KWS model for all combinations of mask types, window sizes and mask percentages
+for mask_type in mask_types:
+    for window_size in window_sizes: 
+        for mask_percentage in mask_percentages:
+            mask_config = MaskingConfig(segment_length=SEGMENT_LENGTH, 
+                                        mask_percentage=mask_percentage, 
+                                        window_size=window_size,
+                                        num_samples=NUM_SAMPLES, 
+                                        function='euclidean',
+                                        mask_type=mask_type)
+            j =0
+            for i in tqdm(range(len(df))):
+                filename = df.loc[i, 'filename']
+                if j < 50:
+                    generate_explanation(
+                        filename=filename,
+                        model_name='kws',
+                        id_to_explain=0,
+                        config=mask_config,
+                        path='/home/ec2-user/results1/explanations_kws'
+                    )
+                torch.cuda.empty_cache()
+                del filename
+                j=j+1
