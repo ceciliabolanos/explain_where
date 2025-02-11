@@ -2,6 +2,7 @@ from explainers.random_forest import RFExplainer
 from explainers.linear_regression import LRExplainer
 from explainers.naive import NaiveExplainer
 from explainers.kernel_shap import KernelShapExplainer
+from explainers.kernel_shap_1constrain import KernelShapExplainer1constraint
 
 from data.mask_windows import WindowMaskingDataGenerator
 from data.base_generator import MaskingConfig
@@ -71,15 +72,7 @@ def generate_explanation(filename: str,
 
     if os.path.exists(output_path):
         return 
-    # # Naive analysis
-    print('Running Naive analysis...')
-    # naive_analyzer = NaiveExplainer(
-    #     path= Path(path) / filename / model_name / f"scores_w1_m{config.mask_type}.json",
-    #     filename=filename
-    # )
-    # importances_naive = naive_analyzer.get_feature_importance(label_to_explain=id_to_explain)
 
-    print('Running Kernel Shap...')
     kernelshap_analyzer = KernelShapExplainer(
         path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
     )
@@ -87,14 +80,18 @@ def generate_explanation(filename: str,
         label_to_explain=id_to_explain, empty_score=pred_zeros[id_to_explain]
     ).get_feature_importances()
 
-    # Random Forest analysis    
-    print('Running Random Forest analysis...')
+    kernelshap_analyzer_1constraint = KernelShapExplainer1constraint(
+        path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
+    )
+    importances_kernelshap_analyzer_1constraint = kernelshap_analyzer_1constraint.explain_instance(
+        label_to_explain=id_to_explain, empty_score=pred_zeros[id_to_explain]
+    ).get_feature_importances()
+
     rf_analyzer = RFExplainer(
         path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
         filename=filename,
     )
     importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
-    # importances_rf_shap = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='shap')
 
     # LR analysis
     print('Running Linear Regression analysis...')
@@ -121,18 +118,14 @@ def generate_explanation(filename: str,
             "true_score": real_score_id
         },
         "importance_scores": {
-            # "naive": {
-            #     "method": "NaiveAudioAnalyzer",
-            #     "values": importances_naive.tolist() if hasattr(importances_naive, 'tolist') else importances_naive
-            # },
+            "importances_kernelshap_analyzer_1constraint": {
+                "method": "NaiveAudioAnalyzer",
+                "values": importances_kernelshap_analyzer_1constraint.tolist() if hasattr(importances_kernelshap_analyzer_1constraint, 'tolist') else importances_kernelshap_analyzer_1constraint
+            },
             "random_forest_tree_importance": {
                     "method": "masked rf with tree importance",
                     "values": importances_rf_tree.tolist() if hasattr(importances_rf_tree, 'tolist') else importances_rf_tree
             },
-            # "random_forest_shap_importance": {
-            #     "method": "masked rf with shap importance",
-            #     "values": importances_rf_shap.tolist() if hasattr(importances_rf_shap, 'tolist') else importances_rf_shap
-            # },
             "linear_regression": {
                 "method": "Linear Regression with kernel as pi",
                 "values": importances_lime.tolist() if hasattr(importances_lime, 'tolist') else importances_lime

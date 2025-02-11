@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.linear_model import LinearRegression
 from sklearn.utils import check_random_state
 import json
 from math import comb
@@ -31,31 +32,34 @@ class KernelBase:
     def explain_instance_with_data(self, neighborhood_data, neighborhood_labels, 
                                  distances, empty_score):
         
-        weights = pi_x_for_list(distances[1:]) 
-
-        b0 = empty_score
+        weights = pi_x_for_list(distances[1:])    
         features = range(neighborhood_data.shape[1])
 
         X = neighborhood_data[1:, features]
-        y = neighborhood_labels[1:] - b0
-        weights = np.array(weights)  
+        y = neighborhood_labels[1:]
+        weights = np.array(weights)  # Ensure weights are in array format
         b_eq = [neighborhood_labels[0]]
 
         # Define objective function (Weighted Least Squares)
         def weighted_loss(coeffs):
-            residuals = y - np.dot(X, coeffs)  # Compute residuals
-            weighted_residuals = weights * residuals**2  # Apply sample weights
-            return np.sum(weighted_residuals)  # Minimize weighted sum of squared errors
+            b0 = coeffs[-1]  # Last coefficient is b0
+            phi_coeffs = coeffs[:-1]  # All other coefficients are phi values
+            
+            # Compute residuals including b0
+            residuals = y - (np.dot(X, phi_coeffs) + b0)
+            weighted_residuals = weights * residuals**2
+            return np.sum(weighted_residuals)
 
-        # Define constraint: sum(ϕ) + b0 = f_x
-        constraint = {'type': 'eq', 'fun': lambda coeffs: np.sum(coeffs) + b0 - b_eq[0]}
-        init_guess = np.zeros(X.shape[1])
-        result = minimize(weighted_loss, init_guess, constraints=constraint, method='SLSQP', options={'maxiter': 1000})
+        initial_coeffs = np.zeros(X.shape[1] + 1)  # Add one more dimension for b0
+        constraint = {'type': 'eq', 'fun': lambda coeffs: np.sum(coeffs) - b_eq[0]}
+        result = minimize(weighted_loss, initial_coeffs, constraints=constraint, method='SLSQP', options={'maxiter': 1000})
         
         if not result.success:
             raise RuntimeError(f"Optimization did not converge: {result.message}")
-        constrained_coeffs = result.x
-
+       
+         
+        b0 = result.x[-1]
+        constrained_coeffs = result.x[:-1]
         local_pred = np.dot(neighborhood_data[0, features], constrained_coeffs) + b0
         
         return (b0,
@@ -82,7 +86,7 @@ class Explanation:
         }
 
 
-class KernelShapExplainer:
+class KernelShapExplainer1constraint:
     def __init__(self, path, random_state=42):
         self.random_state = check_random_state(random_state)
         self.base = KernelBase(random_state=self.random_state)
