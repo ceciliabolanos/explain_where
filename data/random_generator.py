@@ -1,32 +1,35 @@
 import json
 import random
 from pathlib import Path
+import os
 
 class RandomDataGenerator:
-    def __init__(self, path, model_name, windows, functions, mask_types, mask_percentages, num_samples):
+    def __init__(self, path, model_name, filename, windows, functions, mask_types, mask_percentages, num_samples, name):
         self.path = Path(path)
-        self.possible_windows = windows[1, 2, 3, 4, 5]
-        self.possible_functions = functions ["euclidean"]
-        self.possible_mask_types = mask_types ["zeros", "stat", "noise"]
-        self.possible_mask_percentages = mask_percentages[0.1, 0.2, 0.3, 0.4]
+        self.possible_windows = windows
+        self.possible_functions = functions 
+        self.possible_mask_types = mask_types 
+        self.possible_mask_percentages = mask_percentages
         self.num_samples = num_samples
-        self.filename
+        self.filename = filename
         self.model_name = model_name
-
+        self.name = name
+        
     def process_random_file(self):
         # Step 1: Get list of all JSON files
         scores = []
         neighborhood = []
         snrs = []
-        
+        filename = os.path.basename(self.filename)
+ 
         for i in range(self.num_samples):
             window_size = random.choice(self.possible_windows)
             mask_type = random.choice(self.possible_mask_types)
             mask_percentage = random.choice(self.possible_mask_percentages)
-
+            function = random.choice(self.possible_functions)
             chosen_file = (
-                Path(self.path) / self.filename / self.model_name /
-                f"scores_p{mask_percentage}_w{window_size}_f{self.possible_functions}_m{mask_type}.json"
+                Path(self.path) / filename / self.model_name /
+                f"scores_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}.json"
             )
 
             # Step 3: Load the chosen file
@@ -51,8 +54,8 @@ class RandomDataGenerator:
 
         # Step 6: Save the new file
         output_file = (
-                Path(self.path) / self.filename / self.model_name /
-                f"scores_p{mask_percentage}_w{window_size}_f{self.function}_m{mask_type}.json"
+                Path(self.path) / filename / self.model_name /
+                f"scores_{self.name}.json"
             )
         output_file.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
 
