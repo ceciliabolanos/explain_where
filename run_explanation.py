@@ -1,6 +1,7 @@
 from explainers.random_forest import RFExplainer
 from explainers.linear_regression import LRExplainer
-from explainers.naive import NaiveExplainer
+from explainers.linear_regression_noconstrain import LRnoconExplainer
+
 from explainers.kernel_shap import KernelShapExplainer
 from explainers.kernel_shap_1constrain import KernelShapExplainer1constraint
 
@@ -94,7 +95,15 @@ def generate_explanation(filename: str,
     importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
 
     # LR analysis
-    print('Running Linear Regression analysis...')
+    lime_nocon_analyzer = LRnoconExplainer(
+        Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
+        verbose=False,
+        absolute_feature_sort=False
+    )
+    importances_nocon = lime_nocon_analyzer.explain_instance(
+        label_to_explain=id_to_explain
+    ).get_feature_importances()
+    
     lime_analyzer = LRExplainer(
         Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
         verbose=False,
@@ -129,6 +138,10 @@ def generate_explanation(filename: str,
             "linear_regression": {
                 "method": "Linear Regression with kernel as pi",
                 "values": importances_lime.tolist() if hasattr(importances_lime, 'tolist') else importances_lime
+            },
+            "linear_regression_nocon": {
+                "method": "Linear Regression with kernel as pi",
+                "values": importances_nocon.tolist() if hasattr(importances_nocon, 'tolist') else importances_nocon
             },
             "kernel_shap": {
                 "method": "Linear Regression with shap as pi",

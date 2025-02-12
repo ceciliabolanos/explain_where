@@ -63,13 +63,13 @@ def get_segments(base_segment_id, label, model):
                 segment_lists.append(ast.literal_eval(value))  
         
     if model == 'cough':
-        df = pd.read_csv("/home/cbolanos/explain_where/models/cough/cough_happy.csv")
+        df = pd.read_csv("/home/ec2-user/explain_where/models/cough/cough_happy.csv")
         filtered_df = df[df['filename'] == base_segment_id]
         filtered_df = filtered_df.reset_index(drop=True)
         segment_lists = [[filtered_df['cough_start'][0]/16000, filtered_df['cough_end'][0]/16000]]
     
     if model == 'drums':
-        df = pd.read_csv("/home/cbolanos/explain_where/models/drums/drums_dataset.csv")
+        df = pd.read_csv("/home/ec2-user/explain_where/models/drums/drums_dataset.csv")
         filtered_df = df[df['filename'] == base_segment_id]
         filtered_df = filtered_df.reset_index(drop=True)
         pattern = filtered_df['pattern'].values[0]  # Get the string directly
@@ -81,7 +81,7 @@ def get_segments(base_segment_id, label, model):
             actual_samples += d
 
     if model == 'kws':
-        df = pd.read_csv("/home/cbolanos/explain_where/models/kws/kws_dataset.csv")
+        df = pd.read_csv("/home/ec2-user/explain_where/models/kws/kws_dataset.csv")
         filtered_df = df[df['filename'] == base_segment_id]
         filtered_df = filtered_df.reset_index(drop=True)
         segment_lists = [[filtered_df['word_start'].loc[0], filtered_df['word_end'].loc[0]]]
