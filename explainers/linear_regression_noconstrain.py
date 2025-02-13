@@ -48,7 +48,7 @@ class LimeBase:
         weights = np.maximum(weights, 1e-8)
         weights = weights / np.sum(weights)
         weights = np.ones_like(weights)
-        print(weights)
+
         # Setup local model
         if model_regressor is None:
             model_regressor = LinearRegression(fit_intercept=True)
