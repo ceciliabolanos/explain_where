@@ -3,21 +3,21 @@ import random
 from pathlib import Path
 import os
 from itertools import product
+import math
 
 class RandomDataGenerator:
-    def __init__(self, path, model_name, filename, mask_configs, num_samples, name):
+    def __init__(self, path, model_name, filename, config, num_samples):
         self.path = Path(path)
         self.possible_functions = ['euclidean'] 
         self.num_samples = num_samples
         self.filename = filename
         self.model_name = model_name
-        self.name = name
+        self.name = list(config.keys())[0]
 
-        if self.name in mask_configs:
-            self.possible_mask_types = mask_configs[self.name]["possible_mask_types"]
-            self.possible_mask_percentages = mask_configs[self.name]["mask_percentage"]
-            self.possible_windows = mask_configs[self.name]["possible_windows"]
-            self.num_for_each = self.num_samples / mask_configs[self.name]["combinations"]
+        self.possible_mask_types = config[self.name]["possible_mask_types"]
+        self.possible_mask_percentages = config[self.name]["mask_percentage"]
+        self.possible_windows = config[self.name]["possible_windows"]
+        self.num_for_each = math.ceil(self.num_samples / config[self.name]["combinations"])
 
     def process_random_file(self):
         # Step 1: Get list of all JSON files
@@ -26,8 +26,8 @@ class RandomDataGenerator:
             Path(self.path) / filename / self.model_name /
             f"scores_{self.name}.json"
         )
-        if os.path.exists(output_file):
-            return
+        # if os.path.exists(output_file):
+        #     return
 
         # Step 2: Generate all possible combinations
         all_combinations = list(product(
@@ -65,7 +65,7 @@ class RandomDataGenerator:
             possible_snrs = data.get("snrs", [])
 
             for i in range(self.num_for_each):
-                random_index = random.randrnge(len(possible_snrs))  # Get a random index
+                random_index = random.randint(1, len(possible_snrs) - 1)  # Get a random index
 
                 snrs.append(possible_snrs[random_index])
                 scores.append(data["scores"][random_index])

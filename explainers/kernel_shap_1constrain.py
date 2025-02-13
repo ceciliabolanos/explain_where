@@ -5,23 +5,45 @@ import json
 from math import comb
 import numpy as np
 from scipy.optimize import minimize
+from scipy.special import gammaln
 
-def pi_x_for_list(vectors):
-    results = []
+
+
+def shap_kernel_weight(m, z):
+    """
+    Compute the raw Kernel SHAP weight for a coalition with z features present
+    out of m total.
+    
+    For edge cases (z==0 or z==m) the true weight is infinite.
+    """
+    if z == 0 or z == m:
+        return np.inf
+    log_comb = gammaln(m + 1) - gammaln(z + 1) - gammaln(m - z + 1)
+    log_weight = np.log(m - 1) - log_comb - np.log(z) - np.log(m - z)
+    return np.exp(log_weight)
+
+def pi_x_for_list(vectors, normalize=True, normalize_by_min=True):
+    """
+    Compute the Kernel SHAP weight for each vector in `vectors`.
+    
+    - If `normalize=True`, weights are divided by the weight for a coalition with z=1.
+    - If `normalize_by_min=True`, weights are divided by the minimum nonzero weight.
+    """
+    weights = []
     for x in vectors:
         m = len(x)
-        z = sum(x) 
-        if z == 0 or z == m:
-            results.append(10000) 
-            continue
+        z = sum(x)
+        weight = shap_kernel_weight(m, z)
+        weights.append(weight)
+    
+    if normalize_by_min:
+        min_weight = min([w for w in weights if w > 0])  # Smallest nonzero weight
+        weights = [w / min_weight for w in weights]
+    elif normalize:
+        scaling = shap_kernel_weight(len(vectors[0]), 1)  # Normalize by z=1 weight
+        weights = [w / scaling for w in weights]
+    return weights
 
-        binom_mz = comb(m, z)
-        result = (m - 1) / (binom_mz * z * (m - z))
-        results.append(result)
-
-    mean_result = sum(results) / len(results) if results else 1  # Avoid division by zero
-    normalized_results = [r / mean_result for r in results]
-    return normalized_results
 
 class KernelBase:
     def __init__(self, verbose=False, absolute_feature_sort=False, random_state=None):
@@ -52,7 +74,7 @@ class KernelBase:
 
         initial_coeffs = np.zeros(X.shape[1] + 1)  # Add one more dimension for b0
         constraint = {'type': 'eq', 'fun': lambda coeffs: np.sum(coeffs) - b_eq[0]}
-        result = minimize(weighted_loss, initial_coeffs, constraints=constraint, method='SLSQP', options={'maxiter': 1000})
+        result = minimize(weighted_loss, initial_coeffs, constraints=constraint, method='SLSQP', options={'maxiter': 2000})
         
         if not result.success:
             raise RuntimeError(f"Optimization did not converge: {result.message}")
