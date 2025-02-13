@@ -112,37 +112,29 @@ def read_and_process_importance_scores(file_path):
         
         # Process importance scores
         processed_scores = {
-            'naive': {
-                'method': data['importance_scores']['naive']['method'],
-                'original_values': np.array(data['importance_scores']['naive']['values'])
-            },
             'random_forest': {
                 'tree_importance': {
                     'method': data['importance_scores']['random_forest_tree_importance']['method'],
                     'original_values': np.array(data['importance_scores']['random_forest_tree_importance']['values'])
-                },
-                'shap': {
-                    'method': data['importance_scores']['random_forest_shap_importance']['method'],
-                    'original_values': np.array(data['importance_scores']['random_forest_shap_importance']['values'])
                 }
             },
             'linear_regression': {
-                    'method': data['importance_scores']['linear_regression']['method'],
+                    'method': data['importance_scores']['linear_regression_nocon']['method'],
                     'original_values': np.array(data['importance_scores']['linear_regression']['values']['coefficients'])
             },
              'kernel_shap': {
-                    'method': data['importance_scores']['kernel_shap']['method'],
+                    'method': data['importance_scores']['importances_kernelshap_analyzer_1constraint']['method'],
                     'original_values': np.array(data['importance_scores']['kernel_shap']['values']['coefficients'])
             }
         }
         
-        for key in ['naive', 'linear_regression', 'kernel_shap']:
+        for key in ['linear_regression', 'kernel_shap']:
             processed_scores[key]['processed_values'], processed_scores[key]['time_points'] = \
                 process_importance_values(processed_scores[key]['original_values'])
         
         # Process random forest scores
-        for key in ['tree_importance', 'shap']:
-            processed_scores['random_forest'][key]['processed_values'], \
+        for key in ['tree_importance']:
+            processed_scores['processed_values'], \
             processed_scores['random_forest'][key]['time_points'] = \
                 process_importance_values(processed_scores['random_forest'][key]['original_values'])
     
@@ -213,11 +205,9 @@ def create_waveform_video_with_importances(waveform, processed_scores, output_fi
         
         # Calculate number of importance plots needed
         n_importance_plots = sum([
-            1,  # naive
             1,  # tree (masked, random forest)
             1,  # shap (masked, random forest)
             1,  # linear regression (masked, noise)
-            1,
             1  # kernel shap (masked, noise)
         ])
         
@@ -228,15 +218,10 @@ def create_waveform_video_with_importances(waveform, processed_scores, output_fi
         
         importance_data = []
 
-        for key in ['kernel_shap', 'linear_regression', 'naive']:
+        for key in ['kernel_shap', 'linear_regression', 'tree_importance']:
             lime_values = processed_scores[key]['processed_values']
             lime_times = processed_scores[key]['time_points']
             importance_data.append((f'{key}', lime_values, lime_times))
-    
-        for key in ['tree_importance', 'shap']:
-            rf_values = processed_scores['random_forest'][key]['processed_values']
-            rf_times = processed_scores['random_forest'][key]['time_points']
-            importance_data.append((f'Random Forest ({key})', rf_values, rf_times))
                 
 
         for idx, (title, values, time_points) in enumerate(importance_data):
