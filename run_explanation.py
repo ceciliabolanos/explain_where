@@ -192,9 +192,7 @@ def generate_explanation_from_file(filename: str,
     input, real_score_id = model.process_input()     
     predict_fn = model.get_predict_fn()   
     pred_zeros = predict_fn([np.zeros(len(input))])[0]
-
-    # ######### Generate the importances for each method ##########
-    print('Running Kernel Shap...')
+    
     kernelshap_analyzer = KernelShapExplainer(
         path= Path(path) / filename / model_name / f"scores_{name}.json",
     )
@@ -202,15 +200,29 @@ def generate_explanation_from_file(filename: str,
         label_to_explain=id_to_explain, empty_score=pred_zeros[id_to_explain]
     ).get_feature_importances()
 
-    # Random Forest analysis    
-    print('Running Random Forest analysis...')
+    kernelshap_analyzer_1constraint = KernelShapExplainer1constraint(
+        path= Path(path) / filename / model_name / f"scores_{name}.json",
+    )
+    importances_kernelshap_analyzer_1constraint = kernelshap_analyzer_1constraint.explain_instance(
+        label_to_explain=id_to_explain, empty_score=pred_zeros[id_to_explain]
+    ).get_feature_importances()
+
     rf_analyzer = RFExplainer(
         path= Path(path) / filename / model_name / f"scores_{name}.json",
         filename=filename,
     )
     importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
+
     # LR analysis
-    print('Running Linear Regression analysis...')
+    lime_nocon_analyzer = LRnoconExplainer(
+        Path(path) / filename / model_name / f"scores_{name}.json",
+        verbose=False,
+        absolute_feature_sort=False
+    )
+    importances_nocon = lime_nocon_analyzer.explain_instance(
+        label_to_explain=id_to_explain
+    ).get_feature_importances()
+    
     lime_analyzer = LRExplainer(
         Path(path) / filename / model_name / f"scores_{name}.json",
         verbose=False,
@@ -225,12 +237,16 @@ def generate_explanation_from_file(filename: str,
     output_data = {
         "metadata": {
             "filename": filename,
-            "segment_length": 100,
             "id_explained": float(id_to_explain),
+            "segment_length": 100,
             "true_markers": true_markers,
             "true_score": real_score_id
         },
         "importance_scores": {
+            "importances_kernelshap_analyzer_1constraint": {
+                "method": "NaiveAudioAnalyzer",
+                "values": importances_kernelshap_analyzer_1constraint.tolist() if hasattr(importances_kernelshap_analyzer_1constraint, 'tolist') else importances_kernelshap_analyzer_1constraint
+            },
             "random_forest_tree_importance": {
                     "method": "masked rf with tree importance",
                     "values": importances_rf_tree.tolist() if hasattr(importances_rf_tree, 'tolist') else importances_rf_tree
@@ -238,6 +254,10 @@ def generate_explanation_from_file(filename: str,
             "linear_regression": {
                 "method": "Linear Regression with kernel as pi",
                 "values": importances_lime.tolist() if hasattr(importances_lime, 'tolist') else importances_lime
+            },
+            "linear_regression_nocon": {
+                "method": "Linear Regression with kernel as pi",
+                "values": importances_nocon.tolist() if hasattr(importances_nocon, 'tolist') else importances_nocon
             },
             "kernel_shap": {
                 "method": "Linear Regression with shap as pi",
@@ -252,5 +272,12 @@ def generate_explanation_from_file(filename: str,
         json.dump(output_data, f, indent=2)
 
     print(f"Importance scores saved to: {output_path}")
+    # Save results
+   
+    with open(output_path, 'w') as f:
+        json.dump(output_data, f, indent=2)
+
+    print(f"Importance scores saved to: {output_path}")
 
     return 
+
