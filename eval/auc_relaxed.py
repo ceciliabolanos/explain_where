@@ -1,11 +1,11 @@
-import json
 import numpy as np
-from tqdm import tqdm
-import re
-import os
-import pandas as pd
-import argparse
 from sklearn.metrics import roc_curve, auc
+import argparse
+import os
+import re
+import json
+from tqdm import tqdm
+import pandas as pd
 
 def time_in_segmentation(max_index, list_of_tuples, granularidad_ms, interesection_duration_threshold):
     interval_start = max_index
@@ -20,26 +20,60 @@ def time_in_segmentation(max_index, list_of_tuples, granularidad_ms, interesecti
             intersection_duration = intersection_end - intersection_start
             if intersection_duration > interesection_duration_threshold:
                 return 1
+            elif intersection_duration > 0:
+                return -1
     return 0
 
 def generate_sequence(length):
+    """
+    Generates a list of segment start times.
+    
+    For this example, we use a constant step of 0.1 seconds.
+    """
     return [i * 0.1 for i in range(length)]
 
-def create_segmentation_vector(times_gt, times, granularidad_ms, intersection): 
-    real_vector = np.zeros(len(times))
-
-    for i in range(len(real_vector)):
-        real_vector[i] = time_in_segmentation(times[i], times_gt, granularidad_ms, intersection)
+def create_segmentation_vector(times_gt, times, granularidad_ms, intersection):
+    """
+    Creates a segmentation vector (labels for each segment).
     
+    Parameters:
+        times_gt (list): List of ground truth tuples.
+        times (list): List of segment start times.
+        granularidad_ms (float): Duration of the segment in ms.
+        intersection (float): Duration in seconds from tuple_start defining valid region.
+    
+    Returns:
+        numpy.array: An array where each entry is:
+                     1  (if the segment is valid),
+                    -1  (if the segment is in the discard region),
+                     0  (if the segment is outside any marker).
+    """
+    real_vector = np.zeros(len(times))
+    for i, t in enumerate(times):
+        real_vector[i] = time_in_segmentation(t, times_gt, granularidad_ms, intersection)
     return real_vector
 
-
 def process_audio_file(data, method, intersection):
-    granularidad_ms = data["metadata"]['segment_length']
-    filename = data["metadata"]['filename']
-    times_gt = data['metadata']["true_markers"]
+    """
+    Processes an audio file: it retrieves the model scores, creates the segmentation
+    vector, filters out discard segments, and then computes the ROC curve and AUC.
     
-    # Get importance scores
+    Parameters:
+        data (dict): Contains metadata and importance scores.
+        method (str): Which model’s importance scores to use.
+        intersection (float): Duration (in seconds) from tuple_start defining the valid region.
+    
+    Returns:
+        dict or None: A dictionary with the results, or None if ROC cannot be computed.
+    """
+    # Extract metadata
+    segment_length = data["metadata"]['segment_length']  # assumed in ms
+    filename = data["metadata"]['filename']
+    overlap = 0  # adjust if necessary
+    granularidad_ms = segment_length - overlap
+    times_gt = data['metadata']["true_markers"]
+
+    # Retrieve model importance scores based on the chosen method.
     if method == 'tree_importance':
         values = data['importance_scores']['random_forest_tree_importance']['values']
     elif method == 'linear_regression':
@@ -52,25 +86,37 @@ def process_audio_file(data, method, intersection):
         values = data['importance_scores']['importances_kernelshap_analyzer_1constraint']['values']['coefficients']
     times = generate_sequence(len(values))
     
-    times_segmentation = create_segmentation_vector(times_gt, times, granularidad_ms, intersection)
+    # Create the segmentation vector (labels: 1, -1, or 0)
+    segmentation_labels = create_segmentation_vector(times_gt, times, granularidad_ms, )
 
-    sorted_indices = np.argsort(values)[::-1]  
-    ranking_scores = np.zeros_like(values)
-    ranking_scores[sorted_indices] = np.linspace(1, 0, len(values))
-    
-    fpr, tpr, thresholds = roc_curve(np.array(times_segmentation), ranking_scores)
-    
+    # Filter out segments that are in the discard region (i.e., with label -1).
+    valid_mask = segmentation_labels != -1
+    filtered_segmentation = segmentation_labels[valid_mask]
+    filtered_values = np.array(values)[valid_mask]
+
+    # Reasoning:
+    # We remove segments from the discard region so that only segments that are either
+    # valid (1) or negative (0) are used to compute the ROC curve and AUC.
+    if not (np.any(filtered_segmentation == 1) and np.any(filtered_segmentation == 0)):
+        print(f"Warning: Not enough class diversity in file {filename} for ROC computation.")
+        return None
+
+    # Compute ranking scores.
+    # Here we rank the importance scores: higher scores receive higher ranks.
+    sorted_indices = np.argsort(filtered_values)[::-1]  
+    ranking_scores = np.zeros_like(filtered_values, dtype=float)
+    ranking_scores[sorted_indices] = np.linspace(1, 0, len(filtered_values))
+
+    # Compute ROC curve and AUC using the filtered values.
+    fpr, tpr, thresholds = roc_curve(filtered_segmentation, ranking_scores)
     # Calculate AUC
     roc_auc = auc(fpr, tpr)
 
-    if sum(times_segmentation) == 0:
-        print(filename)
-    
+    # Calculate scores
     order_segmentation_values = {
-        'real_order': times_segmentation, 
-        'model_order': values,
+        'real_order': filtered_segmentation, # Original order of segmentation values (0s and 1s)
+        'model_order': filtered_values, # Segmentation values sorted by importance
         'roc_auc': roc_auc,
-        'k': sum(times_segmentation), 
     }
 
     return {
@@ -99,7 +145,7 @@ def get(method: str, mask_percentage, window_size, mask_type, function, base_pat
             result = process_audio_file(data, method, intersection)
             results.append(result)
         
-    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
+    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_test/')
     os.makedirs(output_dir, exist_ok=True)
     
     pred_df = pd.DataFrame(results)
@@ -129,8 +175,7 @@ def get_with_name(method: str, name, base_path: str, dataset, intersection):
     
     pred_df = pd.DataFrame(results)
     pred_df.to_csv(os.path.join(output_dir, f'order_{method}_{name}_{intersection}.tsv'), sep='\t', index=False)
-
-
+                   
 def main():
     parser = argparse.ArgumentParser(description='Process AudioSet data and generate evaluation files.')
     parser.add_argument('--base_path', type=str,
@@ -149,7 +194,7 @@ def main():
             for mask_percentage in [0.2, 0.3, 0.4]:
                 for window_size in [1, 3, 5]:
                     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0.05)
+                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0.09)
     # for name in names:
     #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
     #         get_with_name(method, name, args.base_path, 'audioset', 0.05)
@@ -160,10 +205,10 @@ def main():
             for mask_percentage in [0.2, 0.3, 0.4]:
                 for window_size in [1, 3, 5]:
                     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'drums', 0.05)
+                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'drums', 0.09)
     for name in names:
         for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-            get_with_name(method, name, args.base_path, 'drums', 0.05)
+            get_with_name(method, name, args.base_path, 'drums', 0.09)
    
     ############## kws
     for function in ['euclidean']:
@@ -171,33 +216,12 @@ def main():
             for mask_percentage in [0.2, 0.3, 0.4]:
                 for window_size in [1, 3, 5]:
                     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'kws',  0.05)
+                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'kws',  0.09)
 
     # for name in names:
     #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
     #         get_with_name(method, name, args.base_path, 'kws', 0.05)
 
-
-    ############## cough 
-    # for function in ['euclidean']:
-    #     for mask_type in ['zeros', 'stat', 'noise']:
-    #         for mask_percentage in [0.2, 0.3, 0.4]:
-    #             for window_size in [1, 3, 5]:
-    #                 for method in ['tree_importance', 'linear_regression', 'kernel_shap', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'cough', 0.05)
-    # for name in names:
-    #     for method in ['tree_importance', 'linear_regression', 'kernel_shap']:
-    #         get_with_name(method, name, args.base_path, 'cough')
-
-
-
-
-    # for function in ['euclidean']:
-    #     for mask_type in ['zeros']:
-    #         for mask_percentage in [0.1, 0.2, 0.3, 0.4]:
-    #             for window_size in [1, 2, 3, 4, 5]:
-    #                 for method in ['tree_importance', 'linear_regression', 'kernel_shap']:
-    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset')
 
 if __name__ == '__main__':
     main()
