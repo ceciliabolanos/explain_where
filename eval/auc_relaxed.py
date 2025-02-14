@@ -87,7 +87,7 @@ def process_audio_file(data, method, intersection):
     times = generate_sequence(len(values))
     
     # Create the segmentation vector (labels: 1, -1, or 0)
-    segmentation_labels = create_segmentation_vector(times_gt, times, granularidad_ms, )
+    segmentation_labels = create_segmentation_vector(times_gt, times, granularidad_ms, intersection)
 
     # Filter out segments that are in the discard region (i.e., with label -1).
     valid_mask = segmentation_labels != -1
@@ -145,7 +145,7 @@ def get(method: str, mask_percentage, window_size, mask_type, function, base_pat
             result = process_audio_file(data, method, intersection)
             results.append(result)
         
-    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_test/')
+    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
     os.makedirs(output_dir, exist_ok=True)
     
     pred_df = pd.DataFrame(results)
