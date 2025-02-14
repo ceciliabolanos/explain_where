@@ -149,7 +149,7 @@ def get(method: str, mask_percentage, window_size, mask_type, function, base_pat
     os.makedirs(output_dir, exist_ok=True)
     
     pred_df = pd.DataFrame(results)
-    pred_df.to_csv(os.path.join(output_dir, f'order_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_{intersection}.tsv'), sep='\t', index=False)
+    pred_df.to_csv(os.path.join(output_dir, f'auc_relaxed_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_{intersection}.tsv'), sep='\t', index=False)
 
 
 def get_with_name(method: str, name, base_path: str, dataset, intersection):
@@ -189,12 +189,12 @@ def main():
              "zeros", "noise", "stat", "all"]
 
     ############## audioset
-    for function in ['euclidean']:
-        for mask_type in ['zeros', 'stat', 'noise']:
-            for mask_percentage in [0.2, 0.3, 0.4]:
-                for window_size in [1, 3, 5]:
-                    for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0.09)
+    # for function in ['euclidean']:
+    #     for mask_type in ['zeros', 'stat', 'noise']:
+    #         for mask_percentage in [0.2, 0.3, 0.4]:
+    #             for window_size in [1, 3, 5]:
+    #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0.09)
     # for name in names:
     #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
     #         get_with_name(method, name, args.base_path, 'audioset', 0.05)
@@ -211,12 +211,12 @@ def main():
             get_with_name(method, name, args.base_path, 'drums', 0.09)
    
     ############## kws
-    for function in ['euclidean']:
-        for mask_type in ['noise', 'stat', 'zeros']:
-            for mask_percentage in [0.2, 0.3, 0.4]:
-                for window_size in [1, 3, 5]:
-                    for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'kws',  0.09)
+    # for function in ['euclidean']:
+    #     for mask_type in ['noise', 'stat', 'zeros']:
+    #         for mask_percentage in [0.2, 0.3, 0.4]:
+    #             for window_size in [1, 3, 5]:
+    #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'kws',  0.09)
 
     # for name in names:
     #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
