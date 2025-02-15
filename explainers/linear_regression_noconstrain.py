@@ -3,7 +3,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.utils import check_random_state
 from functools import partial
 import json
-from utils import compute_log_odds
+from explainers.utils import compute_log_odds
 
 class LimeBase:
     """Base class for learning locally linear sparse models from perturbed data."""

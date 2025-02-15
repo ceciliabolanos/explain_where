@@ -15,14 +15,9 @@ def compute_log_odds(data, label_to_explain):
     def softmax(logits):
         exp_logits = np.exp(logits - np.max(logits, axis=1, keepdims=True))  # Stability trick
         return exp_logits / np.sum(exp_logits, axis=1, keepdims=True)
-
     logits = np.array(data)  # Convert to NumPy array
     probs = softmax(logits)  # Apply softmax
+    log_odds = np.log(probs / (1 - probs))
+    log_odds = log_odds[:, label_to_explain]
 
-    p = probs[:, label_to_explain]  # Extract probability for target class
-
-    # Avoid log(0) issues by clipping probabilities
-    p = np.clip(p, 1e-10, 1 - 1e-10)
-
-    log_odds = np.log(p) - np.log(1 - p)  # Compute log-odds
     return log_odds

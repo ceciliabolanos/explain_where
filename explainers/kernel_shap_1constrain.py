@@ -6,7 +6,7 @@ from math import comb
 import numpy as np
 from scipy.optimize import minimize
 from scipy.special import gammaln
-from utils import compute_log_odds
+from explainers.utils import compute_log_odds
 
 
 def shap_kernel_weight(m, z):

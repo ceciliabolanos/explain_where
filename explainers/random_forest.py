@@ -3,7 +3,7 @@ import json
 from sklearn.ensemble import RandomForestRegressor
 import numpy as np
 import shap 
-from utils import compute_log_odds
+from explainers.utils import compute_log_odds
 SEED = 42
 
 np.random.seed(SEED)
