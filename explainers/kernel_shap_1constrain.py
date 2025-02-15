@@ -22,7 +22,7 @@ def shap_kernel_weight(m, z):
     log_weight = np.log(m - 1) - log_comb - np.log(z) - np.log(m - z)
     return np.exp(log_weight)
 
-def pi_x_for_list(vectors, normalize=True, normalize_by_min=True):
+def pi_x_for_list(vectors):
     """
     Compute the Kernel SHAP weight for each vector in `vectors`.
     
@@ -36,12 +36,16 @@ def pi_x_for_list(vectors, normalize=True, normalize_by_min=True):
         weight = shap_kernel_weight(m, z)
         weights.append(weight)
     
-    if normalize_by_min:
-        min_weight = min([w for w in weights if w > 0])  # Smallest nonzero weight
-        weights = [w / min_weight for w in weights]
-    elif normalize:
-        scaling = shap_kernel_weight(len(vectors[0]), 1)  # Normalize by z=1 weight
-        weights = [w / scaling for w in weights]
+    # if normalize_by_min:
+    #     min_weight = min([w for w in weights if w > 0])  # Smallest nonzero weight
+    #     weights = [w / min_weight for w in weights]
+    # elif normalize:
+    #     scaling = shap_kernel_weight(len(vectors[0]), 1)  # Normalize by z=1 weight
+    #     weights = [w / scaling for w in weights]
+    if len(set(weights)) == 1:
+        weights = [1] * len(weights)
+    mean = sum(weights)/len(weights)
+    weights = [w / mean for w in weights]
     return weights
 
 
@@ -74,9 +78,10 @@ class KernelBase:
 
         initial_coeffs = np.zeros(X.shape[1] + 1)  # Add one more dimension for b0
         constraint = {'type': 'eq', 'fun': lambda coeffs: np.sum(coeffs) - b_eq[0]}
-        result = minimize(weighted_loss, initial_coeffs, constraints=constraint, method='SLSQP', options={'maxiter': 3000})
+        result = minimize(weighted_loss, initial_coeffs, constraints=constraint, method='SLSQP', options={'maxiter': 2000})
         
         if not result.success:
+            print(f"Optimization did not converge:  {result.message, weights}")
             raise RuntimeError(f"Optimization did not converge: {result.message}")
        
          
