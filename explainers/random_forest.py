@@ -3,7 +3,7 @@ import json
 from sklearn.ensemble import RandomForestRegressor
 import numpy as np
 import shap 
-
+from utils import compute_log_odds
 SEED = 42
 
 np.random.seed(SEED)
@@ -14,13 +14,15 @@ class RFExplainer:
         self.path = path
         self.filename = filename
    
-    def get_feature_importances(self, label_to_explain, method='tree'):
+    def get_feature_importances(self, label_to_explain, method='tree', model='drums'):
         with open(self.path, 'r') as file:
             data = json.load(file)
 
-        y = []
-        for score in data['scores']:
-            y.append(score[label_to_explain])
+        if model == 'drums':
+            y = compute_log_odds(data['scores'], label_to_explain)
+            y = y.tolist()
+        else:
+            y = [score[label_to_explain] for score in data['scores']]
 
         distances = data['neighborhood']
 

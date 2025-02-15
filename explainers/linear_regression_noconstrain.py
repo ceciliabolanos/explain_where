@@ -3,7 +3,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.utils import check_random_state
 from functools import partial
 import json
-
+from utils import compute_log_odds
 
 class LimeBase:
     """Base class for learning locally linear sparse models from perturbed data."""
@@ -131,7 +131,7 @@ class LRnoconExplainer:
                            random_state=self.random_state)
         self.path = path
 
-    def explain_instance(self, label_to_explain=None, model_regressor=None, random_seed=42):
+    def explain_instance(self, label_to_explain=None, model_regressor=None, random_seed=42, model='drums'):
         """
         Generate explanation for an audio instance.
         
@@ -151,8 +151,12 @@ class LRnoconExplainer:
         with open(self.path, 'r') as file:
             data = json.load(file)
 
-        y = [score[label_to_explain] for score in data['scores']]
-        y = np.array(y)
+        if model == 'drums':
+            y = compute_log_odds(data['scores'], label_to_explain)
+            y = np.array(y)
+        else:
+            y = [score[label_to_explain] for score in data['scores']]
+            y = np.array(y)
         distances = np.array(data['neighborhood'])
         
         # Handle potential zero distances

@@ -6,7 +6,7 @@ from math import comb
 import numpy as np
 from scipy.optimize import minimize
 from scipy.special import gammaln
-
+from utils import compute_log_odds
 
 
 def shap_kernel_weight(m, z):
@@ -119,16 +119,19 @@ class KernelShapExplainer1constraint:
         self.base = KernelBase(random_state=self.random_state)
         self.path = path
 
-    def explain_instance(self, label_to_explain=None, empty_score=None, random_seed=42):
+    def explain_instance(self, label_to_explain=None, empty_score=None, random_seed=42, model='drums'):
         if random_seed is None:
             random_seed = self.random_state.randint(0, high=1000)
 
         with open(self.path, 'r') as file:
             data = json.load(file)
 
-        y = [score[label_to_explain] for score in data['scores']]
-        y = np.array(y)
-        
+        if model == 'drums':
+            y = compute_log_odds(data['scores'], label_to_explain)
+            y = np.array(y)
+        else:
+            y = [score[label_to_explain] for score in data['scores']]
+            y = np.array(y)
         distances = data['snrs']
         
         explanation = Explanation(np.array(data['snrs']), y)
