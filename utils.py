@@ -120,11 +120,11 @@ def read_and_process_importance_scores(file_path):
             },
             'linear_regression': {
                     'method': data['importance_scores']['linear_regression_nocon']['method'],
-                    'original_values': np.array(data['importance_scores']['linear_regression']['values']['coefficients'])
+                    'original_values': np.array(data['importance_scores']['linear_regression_nocon']['values']['coefficients'])
             },
              'kernel_shap': {
                     'method': data['importance_scores']['importances_kernelshap_analyzer_1constraint']['method'],
-                    'original_values': np.array(data['importance_scores']['kernel_shap']['values']['coefficients'])
+                    'original_values': np.array(data['importance_scores']['importances_kernelshap_analyzer_1constraint']['values']['coefficients'])
             }
         }
         
@@ -134,10 +134,9 @@ def read_and_process_importance_scores(file_path):
         
         # Process random forest scores
         for key in ['tree_importance']:
-            processed_scores['processed_values'], \
+            processed_scores['random_forest'][key]['processed_values'], \
             processed_scores['random_forest'][key]['time_points'] = \
                 process_importance_values(processed_scores['random_forest'][key]['original_values'])
-    
         
         return {
             'metadata': metadata,
@@ -218,11 +217,15 @@ def create_waveform_video_with_importances(waveform, processed_scores, output_fi
         
         importance_data = []
 
-        for key in ['kernel_shap', 'linear_regression', 'tree_importance']:
+        for key in ['kernel_shap', 'linear_regression']:
             lime_values = processed_scores[key]['processed_values']
             lime_times = processed_scores[key]['time_points']
             importance_data.append((f'{key}', lime_values, lime_times))
                 
+        for key in ['tree_importance']:
+            lime_values = processed_scores['random_forest'][key]['processed_values']
+            lime_times = processed_scores['random_forest'][key]['time_points']
+            importance_data.append((f'{key}', lime_values, lime_times))
 
         for idx, (title, values, time_points) in enumerate(importance_data):
             ax = axes[idx]

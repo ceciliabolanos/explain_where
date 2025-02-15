@@ -70,7 +70,7 @@ class KernelBase:
         # Define constraint: sum(ϕ) + b0 = f_x
         constraint = {'type': 'eq', 'fun': lambda coeffs: np.sum(coeffs) + b0 - b_eq[0]}
         init_guess = np.zeros(X.shape[1])
-        result = minimize(weighted_loss, init_guess, constraints=constraint, method='SLSQP', options={'maxiter': 2000})
+        result = minimize(weighted_loss, init_guess, constraints=constraint, method='SLSQP', options={'maxiter': 3000})
         
         if not result.success:
             raise RuntimeError(f"Optimization did not converge: {result.message}")

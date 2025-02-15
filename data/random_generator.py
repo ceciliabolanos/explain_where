@@ -26,8 +26,8 @@ class RandomDataGenerator:
             Path(self.path) / filename / self.model_name /
             f"scores_{self.name}.json"
         )
-        # if os.path.exists(output_file):
-        #     return
+        if os.path.exists(output_file):
+            return
 
         # Step 2: Generate all possible combinations
         all_combinations = list(product(

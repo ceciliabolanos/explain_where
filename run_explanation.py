@@ -187,6 +187,7 @@ def generate_explanation_from_file(filename: str,
     
     output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_{name}.json"
     if os.path.exists(output_path):
+        print(output_path)
         return 
     
     input, real_score_id = model.process_input()     

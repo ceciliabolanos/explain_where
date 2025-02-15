@@ -74,7 +74,7 @@ class KernelBase:
 
         initial_coeffs = np.zeros(X.shape[1] + 1)  # Add one more dimension for b0
         constraint = {'type': 'eq', 'fun': lambda coeffs: np.sum(coeffs) - b_eq[0]}
-        result = minimize(weighted_loss, initial_coeffs, constraints=constraint, method='SLSQP', options={'maxiter': 2000})
+        result = minimize(weighted_loss, initial_coeffs, constraints=constraint, method='SLSQP', options={'maxiter': 3000})
         
         if not result.success:
             raise RuntimeError(f"Optimization did not converge: {result.message}")

@@ -66,11 +66,11 @@ def compute_importance_score(importance_values, gt_mask):
     
     # Obtener el máximo fuera de GT
     max_outside_gt = max(importance_values[non_gt_indices]) if len(non_gt_indices) > 0 else float('-inf')
-    
+    if max_outside_gt < 0:
+        max_outside_gt = 0
     # Rango de importancias
     global_max = max(importance_values)
-    global_min = min(importance_values)
-    range_importance = global_max - global_min if global_max != global_min else 1  # Evitar división por cero
+    range_importance = global_max if global_max != 0 else 1  # Evitar división por cero
     
     # Calcular métrica
     score = (min_of_max_gt - max_outside_gt) / range_importance
