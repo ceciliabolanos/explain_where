@@ -183,44 +183,22 @@ def main():
                       help='Base path for AudioSet experiments')
     args = parser.parse_args()
 
-    names = ["0.2-1", "0.2-3", "0.2-5",
-            "0.3-1", "0.3-3", "0.3-5",
-            "0.4-1","0.4-3","0.4-5", 
-             "zeros", "noise", "stat", "all"]
+    names = ["zeros", "noise", "stat", "all"]
 
-    ############## audioset
-    # for function in ['euclidean']:
-    #     for mask_type in ['zeros', 'stat', 'noise']:
-    #         for mask_percentage in [0.2, 0.3, 0.4]:
-    #             for window_size in [1, 3, 5]:
-    #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0.09)
-    # for name in names:
-    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-    #         get_with_name(method, name, args.base_path, 'audioset', 0.05)
+    # Select dataset to run
 
-    ############## drums 
+    dataset = 'audioset'
     for function in ['euclidean']:
         for mask_type in ['zeros', 'stat', 'noise']:
             for mask_percentage in [0.2, 0.3, 0.4]:
                 for window_size in [1, 3, 5]:
                     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'drums', 0.09)
+                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, dataset, 0.09)
     for name in names:
         for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-            get_with_name(method, name, args.base_path, 'drums', 0.09)
-   
-    ############## kws
-    for function in ['euclidean']:
-        for mask_type in ['noise', 'stat', 'zeros']:
-            for mask_percentage in [0.2, 0.3, 0.4]:
-                for window_size in [1, 3, 5]:
-                    for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'kws',  0.09)
+            get_with_name(method, name, args.base_path, dataset, 0.09)
 
-    # for name in names:
-    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-    #         get_with_name(method, name, args.base_path, 'kws', 0.05)
+
 
 
 if __name__ == '__main__':

@@ -18,7 +18,7 @@ def time_in_segmentation(max_index, list_of_tuples, granularidad_ms, interesecti
         
         if intersection_end > intersection_start:
             intersection_duration = intersection_end - intersection_start
-            if intersection_duration > interesection_duration_threshold:
+            if intersection_duration >= interesection_duration_threshold:
                 return 1
     return 0
 
@@ -144,34 +144,34 @@ def main():
              "zeros", "noise", "stat", "all"]
 
     ############## audioset
-    # for function in ['euclidean']:
-    #     for mask_type in ['zeros', 'stat', 'noise']:
-    #         for mask_percentage in [0.2, 0.3, 0.4]:
-    #             for window_size in [1, 3, 5]:
-    #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0.05)
-    # for name in names:
-    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-    #         get_with_name(method, name, args.base_path, 'audioset', 0.05)
-
-    ############## drums 
     for function in ['euclidean']:
         for mask_type in ['zeros', 'stat', 'noise']:
             for mask_percentage in [0.2, 0.3, 0.4]:
                 for window_size in [1, 3, 5]:
                     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'drums', 0.05)
-    for name in names:
-        for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-            get_with_name(method, name, args.base_path, 'drums', 0.05)
+                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0.05)
+    # for name in names:
+    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #         get_with_name(method, name, args.base_path, 'audioset', 0.05)
+
+    ############# drums 
+    # for function in ['euclidean']:
+    #     for mask_type in ['zeros', 'stat', 'noise']:
+    #         for mask_percentage in [0.2, 0.3, 0.4]:
+    #             for window_size in [1, 3, 5]:
+    #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'drums', 0.05)
+    # for name in names:
+    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #         get_with_name(method, name, args.base_path, 'drums', 0.05)
    
-    ############## kws
-    for function in ['euclidean']:
-        for mask_type in ['noise', 'stat', 'zeros']:
-            for mask_percentage in [0.2, 0.3, 0.4]:
-                for window_size in [1, 3, 5]:
-                    for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'kws',  0.05)
+    # ############## kws
+    # for function in ['euclidean']:
+    #     for mask_type in ['noise', 'stat', 'zeros']:
+    #         for mask_percentage in [0.2, 0.3, 0.4]:
+    #             for window_size in [1, 3, 5]:
+    #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'kws',  0.05)
 
     # for name in names:
     #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
@@ -191,13 +191,6 @@ def main():
 
 
 
-
-    # for function in ['euclidean']:
-    #     for mask_type in ['zeros']:
-    #         for mask_percentage in [0.1, 0.2, 0.3, 0.4]:
-    #             for window_size in [1, 2, 3, 4, 5]:
-    #                 for method in ['tree_importance', 'linear_regression', 'kernel_shap']:
-    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset')
 
 if __name__ == '__main__':
     main()

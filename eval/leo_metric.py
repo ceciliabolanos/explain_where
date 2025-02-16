@@ -121,7 +121,7 @@ def get(method: str, mask_percentage, window_size, mask_type, function, base_pat
     results = []
     
     for root, _, files in tqdm(os.walk(os.path.join(base_path, f'explanations_{dataset}'))):
-        pattern = re.compile(rf'ft_.*_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}\.json$')
+        pattern = re.compile(rf'ft1_.*_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}\.json$')
         json_files = [f for f in files if pattern.match(f)]
         
         for json_file in json_files:
@@ -174,66 +174,24 @@ def main():
                       help='Base path for AudioSet experiments')
     args = parser.parse_args()
 
-    names = ["0.2-1", "0.2-3", "0.2-5",
-            "0.3-1", "0.3-3", "0.3-5",
-            "0.4-1","0.4-3","0.4-5", 
-             "zeros", "noise", "stat", "all"]
+    # Select the dataset to run
 
-    # ############## audioset
-    # for function in ['euclidean']:
-    #     for mask_type in ['zeros', 'stat', 'noise']:
-    #         for mask_percentage in [0.2, 0.3, 0.4]:
-    #             for window_size in [1, 3, 5]:
-    #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0)
-    # for name in names:
-    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-    #         get_with_name(method, name, args.base_path, 'audioset', 0.05)
-
-    ############## drums 
+    names = ["zeros", "noise", "stat", "all"] 
+    dataset = 'kws'
     for function in ['euclidean']:
         for mask_type in ['zeros', 'stat', 'noise']:
             for mask_percentage in [0.2, 0.3, 0.4]:
                 for window_size in [1, 3, 5]:
                     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'drums', 0)
+                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, dataset, 0)
     for name in names:
         for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-            get_with_name(method, name, args.base_path, 'drums', 0)
-   
-    ############## kws
-    for function in ['euclidean']:
-        for mask_type in ['noise', 'stat', 'zeros']:
-            for mask_percentage in [0.2, 0.3, 0.4]:
-                for window_size in [1, 3, 5]:
-                    for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'kws',  0)
-
-    # for name in names:
-    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-    #         get_with_name(method, name, args.base_path, 'kws', 0.05)
-
-
-    ############## cough 
-    # for function in ['euclidean']:
-    #     for mask_type in ['zeros', 'stat', 'noise']:
-    #         for mask_percentage in [0.2, 0.3, 0.4]:
-    #             for window_size in [1, 3, 5]:
-    #                 for method in ['tree_importance', 'linear_regression', 'kernel_shap', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'cough', 0.05)
-    # for name in names:
-    #     for method in ['tree_importance', 'linear_regression', 'kernel_shap']:
-    #         get_with_name(method, name, args.base_path, 'cough')
-
-
-
-
-    # for function in ['euclidean']:
-    #     for mask_type in ['zeros']:
-    #         for mask_percentage in [0.1, 0.2, 0.3, 0.4]:
-    #             for window_size in [1, 2, 3, 4, 5]:
-    #                 for method in ['tree_importance', 'linear_regression', 'kernel_shap']:
-    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset')
+            get_with_name(method, name, args.base_path, dataset, 0)
+  
+    # names = ["0.2-1", "0.2-3", "0.2-5",
+    #         "0.3-1", "0.3-3", "0.3-5",
+    #         "0.4-1","0.4-3","0.4-5", 
+    #          "zeros", "noise", "stat", "all"]
 
 if __name__ == '__main__':
     main()
