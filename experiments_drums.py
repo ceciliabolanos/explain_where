@@ -13,15 +13,11 @@ NUM_SAMPLES = 3000
 df = pd.read_csv(LABELS_PATH)
 
 
-# mask_percentages = [0.4, 0.2, 0.3]
-# window_sizes = [3, 5, 1]
-# mask_types = ['stat', 'zeros', 'noise']
+mask_percentages = [0.4, 0.2, 0.3]
+window_sizes = [3, 5, 1]
+mask_types = ['stat', 'zeros', 'noise']
 
-# # Redirect stdout to a log file
-# log_file_path = '/home/ec2-user/results1/process_log_drums.txt'
-# sys.stdout = open(log_file_path, 'w')
-
-# print("Starting explanation generation for Drums model.")
+print("Starting explanation generation for Drums model.")
 
 # for mask_type in mask_types:
 #     for window_size in window_sizes: 
@@ -64,30 +60,14 @@ df = pd.read_csv(LABELS_PATH)
 # # Print final message when process is complete
 # print("Explanation generation process for Drums model completed.")
 
-# # Close the log file when done
-# sys.stdout.close()
-
-
-mask_configs = [
-    {"0.2-1": {"mask_percentage": [0.2], "possible_windows": [1], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    {"0.2-3": {"mask_percentage": [0.2], "possible_windows": [3], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    {"0.2-5": {"mask_percentage": [0.2], "possible_windows": [5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    
-    {"0.3-1": {"mask_percentage": [0.3], "possible_windows": [1], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    {"0.3-3": {"mask_percentage": [0.3], "possible_windows": [3], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    {"0.3-5": {"mask_percentage": [0.3], "possible_windows": [5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    
-    {"0.4-1": {"mask_percentage": [0.4], "possible_windows": [1], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    {"0.4-3": {"mask_percentage": [0.4], "possible_windows": [3], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    {"0.4-5": {"mask_percentage": [0.4], "possible_windows": [5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    
+mask_configs = [ 
     {"zeros": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['zeros'], "combinations": 9}},
     {"noise": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['noise'], "combinations": 9}},
     {"stat": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['stat'], "combinations": 9}},
     
     {"all": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 27}},
 ]
-
+j = 0
 for i in tqdm(range(len(df))):
     for config in mask_configs:
         filename = df.loc[i, 'filename']
@@ -109,3 +89,27 @@ for i in tqdm(range(len(df))):
                       path='/home/ec2-user/results1/explanations_drums')
             print('Done')
     j=j+1
+
+
+
+
+
+# mask_configs = [
+#     {"0.2-1": {"mask_percentage": [0.2], "possible_windows": [1], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+#     {"0.2-3": {"mask_percentage": [0.2], "possible_windows": [3], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+#     {"0.2-5": {"mask_percentage": [0.2], "possible_windows": [5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+    
+#     {"0.3-1": {"mask_percentage": [0.3], "possible_windows": [1], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+#     {"0.3-3": {"mask_percentage": [0.3], "possible_windows": [3], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+#     {"0.3-5": {"mask_percentage": [0.3], "possible_windows": [5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+    
+#     {"0.4-1": {"mask_percentage": [0.4], "possible_windows": [1], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+#     {"0.4-3": {"mask_percentage": [0.4], "possible_windows": [3], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+#     {"0.4-5": {"mask_percentage": [0.4], "possible_windows": [5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+    
+#     {"zeros": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['zeros'], "combinations": 9}},
+#     {"noise": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['noise'], "combinations": 9}},
+#     {"stat": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['stat'], "combinations": 9}},
+    
+#     {"all": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 27}},
+# ]
