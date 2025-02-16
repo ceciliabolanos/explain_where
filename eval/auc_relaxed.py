@@ -194,9 +194,9 @@ def main():
                 for window_size in [1, 3, 5]:
                     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
                         get(method, mask_percentage, window_size, mask_type, function, args.base_path, dataset, 0.09)
-    for name in names:
-        for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-            get_with_name(method, name, args.base_path, dataset, 0.09)
+    # for name in names:
+    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #         get_with_name(method, name, args.base_path, dataset, 0.09)
 
 
 

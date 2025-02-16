@@ -1,7 +1,3 @@
-from transformers import AutoFeatureExtractor, ASTForAudioClassification
-import torch
-import soundfile as sf
-from scipy.signal import resample
 import json
 from tqdm import tqdm
 from utils import process_importance_values
@@ -9,158 +5,138 @@ import os
 import pandas as pd
 import argparse
 import re
+import numpy as np
+from models.ast import ASTModel
+from models.drums import DrumsModel
+from models.kws import KWSModel
 
-def save_scores(filename, data, score_curves, method, mask_percentage, window_size):
-    scores = {
-        'filename': filename,
-        'event_label': data['metadata']['label_explained'],
-        'actual_score': data['metadata']['true_score'],
-        **score_curves
-    }
-    label_explained = data['metadata']['label_explained']
-
-    dir_path = os.path.join('/home/cbolanos/experiments/audioset_audios_eval', filename)
-    os.makedirs(dir_path, exist_ok=True)
+def get_audio_base(wav_data, masking_type, segment_length, sr=16000, overlap=0):
+    if masking_type not in {"zeros", "noise", "stat", "all"}:
+        raise ValueError("Invalid masking_type. Choose from 'zeros', 'noise', 'stat', or 'all'.")
     
-    with open(os.path.join(dir_path, f'scores_curves_{method}_{label_explained}_p{mask_percentage}_m{window_size}.json'), 'w') as f:
-        json.dump(scores, f, indent=2)
+    overlap_samples = int(sr * (overlap / 1000))
+    segment_length = int(sr * (segment_length / 1000))
+    step_samples = segment_length - overlap_samples
     
-
-def get_model_and_extractor(model_name: str):
-    if model_name == 'yamnet': # cambiar esto de aca
-        model = ASTForAudioClassification.from_pretrained(model_name)
-        feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
-    elif model_name == 'ast':
-        feature_extractor = AutoFeatureExtractor.from_pretrained("MIT/ast-finetuned-audioset-10-10-0.4593")
-        model = ASTForAudioClassification.from_pretrained("MIT/ast-finetuned-audioset-10-10-0.4593")
-    else:
-        raise ValueError(f"Unsupported model: {model_name}")
+    masked_audio = np.copy(wav_data)
     
-    return model.to('cuda'), feature_extractor
-
-def predict_fn(wav_array, feature_extractor, model):
-    if not isinstance(wav_array, list):
-        wav_array = [wav_array]
-    
-    inputs_list = [feature_extractor(audio, sampling_rate=16000, return_tensors="pt") 
-                  for audio in wav_array]
-    
-    inputs = {
-        k: torch.cat([inp[k] for inp in inputs_list]).to("cuda")
-        for k in inputs_list[0].keys()
-    }
-    
-    with torch.no_grad():
-        logits = model(**inputs).logits
+    current_pos = 0
+    while current_pos < len(wav_data):
+        end = min(current_pos + segment_length, len(wav_data))
         
-    return logits.cpu().tolist()
+        if masking_type == "zeros":
+            masked_audio[current_pos:end] = 0
+        
+        elif masking_type == "noise":
+            noise_std = np.random.uniform(0.01, 0.1)
+            masked_audio[current_pos:end] = np.random.normal(np.mean(wav_data), noise_std, end - current_pos)
+        
+        elif masking_type == "stat":
+            fill_value = np.mean(wav_data[current_pos:end])
+            masked_audio[current_pos:end] = fill_value
+        
+        elif masking_type == "all":
+            random_mask_type = np.random.choice(["zeros", "noise", "stat"])
+            if random_mask_type == "zeros":
+                masked_audio[current_pos:end] = 0
+            elif random_mask_type == "noise":
+                noise_std = np.random.uniform(0.01, 0.1)
+                masked_audio[current_pos:end] = np.random.normal(np.mean(wav_data), noise_std, end - current_pos)
+            elif random_mask_type == "stat":
+                fill_value = np.mean(wav_data[current_pos:end])
+                masked_audio[current_pos:end] = fill_value
+        
+        current_pos += step_samples
+    
+    return masked_audio
 
-def process_audio_file(file_path, data, model, feature_extractor, method, mask_percentage, window_size):
+def process_audio_file(data, dataset, method, masking_type):
     filename = data["metadata"]['filename']
-    label_explained = data['metadata']['label_explained']
     id_explained = data['metadata']['id_explained']
-    
-    score_path = os.path.join('/home/cbolanos/experiments/audioset_audios_eval', filename, f'scores_curves_{method}_{label_explained}_p{mask_percentage}_m{window_size}.json')
-    
-    if os.path.exists(score_path):
-        with open(score_path, 'r') as f:
-            return json.load(f)
-            
     segment_length = data["metadata"]['segment_length']
-    overlap = 0 #data["metadata"]['overlap']
+    overlap = 0 
     granularidad_ms = segment_length - overlap
-    times_gt = data['metadata']["true_markers"]
+
+    if dataset == 'audioset':
+       model = ASTModel(filename, id_explained) 
+    if dataset == 'drums':
+       model = DrumsModel(filename, id_explained) 
+       filename = os.path.basename(filename)
+    if dataset == 'kws':
+       model = KWSModel(filename, id_explained) 
+       filename = os.path.basename(filename)
     
+    wav_data, real_score_id = model.process_input()     
+    predict_fn = model.get_predict_fn()   
+
     # Get importance scores
     if method == 'tree_importance':
-        values = data['importance_scores']['random_forest'][method]['values']
-    elif method == 'shap':
-        values = data['importance_scores']['random_forest'][method]['values']
-    elif method == 'naive':
-        values = data['importance_scores'][method]['values']
+        values = data['importance_scores']['random_forest_tree_importance']['values']
     elif method == 'linear_regression':
-        values = data['importance_scores'][method]['masked']['values']['coefficients']
+        values = data['importance_scores']['linear_regression']['values']['coefficients']
+    elif method == 'kernel_shap':
+        values = data['importance_scores']['kernel_shap']['values']['coefficients']
+    elif method == 'linear_regression_noreg_noweights':
+        values = data['importance_scores']['linear_regression_nocon']['values']['coefficients']
+    elif method == 'kernel_shap_sumcons':
+        values = data['importance_scores']['importances_kernelshap_analyzer_1constraint']['values']['coefficients']
     
     importance_values, times = process_importance_values(values, segment_size=segment_length, step_size=granularidad_ms)
 
-    # Load and process audio
-    wav_data, sample_rate = sf.read(file_path)
-    if sample_rate != 16000:
-        wav_data = resample(wav_data, int(len(wav_data) * 16000 / sample_rate))
-    if len(wav_data.shape) > 1:
-        wav_data = wav_data.mean(axis=1)
-    
     # Process importance scores
     importance_time_pairs = list(zip(importance_values, times))
 
-    if method == 'naive':
-        sorted_pairs_descending = sorted(importance_time_pairs, key=lambda x: x[0], reverse=True)
-        sorted_pairs_ascending = sorted(importance_time_pairs, key=lambda x: x[0])
-    else:
-        sorted_pairs_descending = sorted(importance_time_pairs, key=lambda x: abs(x[0]), reverse=True)
-        sorted_pairs_ascending = sorted(importance_time_pairs, key=lambda x: abs(x[0]))
+    sorted_pairs_descending = sorted(importance_time_pairs, key=lambda x: x[0], reverse=True)
 
     sorted_importances_d, sorted_times_d = zip(*sorted_pairs_descending)
-    sorted_importances_a, sorted_times_a = zip(*sorted_pairs_ascending)
 
     # Calculate scores
-    audio_descending_higher = wav_data.copy()
-    audio_descending_lower = wav_data.copy()
+    audio_baseline = get_audio_base(wav_data, masking_type, segment_length)
+    
+    audio_sacando_topk = wav_data.copy()
+    audio_solo_topk = audio_baseline.copy()
+    
     score_curves = {
-        'score_curve_descending_higher': [], # Delete higher importance values
-        'score_curve_descending_lower': [],
-        'gt_curve_descending': [],
-        'importance_curve_descending': []
+        'score_curve_sacando_topk': [], # Delete higher importance values
+        'score_curve_consolo_topk': [], # Only have higher importance values
     }
     
     # Process in batches
     batch_size = 100
-    list_descending_higher = []
-    list_descending_lower = []
+    list_audio_sacando_topk = []
+    list_solo_topk = []
+
     for i in range(0, len(sorted_importances_d), batch_size):
         batch_times_d = sorted_times_d[i:i+batch_size]
-        batch_times_a = sorted_times_a[i:i+batch_size]
         
         # Descending modification with the higher importance values
         start_idx_d = int(batch_times_d[0] * 16000)
         end_idx_d = int(batch_times_d[-1] * 16000)
-        audio_descending_higher[start_idx_d:end_idx_d] = 0
+        audio_sacando_topk[start_idx_d:end_idx_d] = audio_baseline[start_idx_d:end_idx_d]
+        audio_solo_topk[start_idx_d:end_idx_d] = wav_data[start_idx_d:end_idx_d]
 
-        # Descending modification with the lower importance values
-        start_idx_a = int(batch_times_a[0] * 16000)
-        end_idx_a = int(batch_times_a[-1] * 16000)
-        audio_descending_lower[start_idx_a:end_idx_a] = 0
-        
-        list_descending_higher.append(audio_descending_higher.copy())
-        list_descending_lower.append(audio_descending_lower.copy())
+        list_audio_sacando_topk.append(audio_sacando_topk.copy())
+        list_solo_topk.append(audio_solo_topk.copy())
 
-        # Calculate scores
-        score_curves['importance_curve_descending'].append(sorted_importances_d[i])
-        is_there = any(time_tuple[0] <= batch_times_d[0] and batch_times_d[-1] <= time_tuple[1] 
-                      for time_tuple in times_gt)
-        score_curves['gt_curve_descending'].append(int(is_there))
 
-    results_descending = predict_fn(list_descending_higher, feature_extractor, model)
-    results_ascending = predict_fn(list_descending_lower, feature_extractor, model)
-    score_curves['score_curve_descending_higher'] = [results_descending[i][id_explained] for i in range(len(list_descending_higher))]
-    score_curves['score_curve_descending_lower'] = [results_ascending[i][id_explained] for i in range(len(list_descending_lower))]
-
-    save_scores(filename, data, score_curves, method, mask_percentage, window_size)
+    results_descending = predict_fn(list_audio_sacando_topk)
+    results_ascending = predict_fn(list_solo_topk)
+    score_curves['score_curve_sacando_topk'] = [results_descending[i] for i in range(len(list_audio_sacando_topk))]
+    score_curves['score_curve_consolo_topk'] = [results_ascending[i] for i in range(len(list_solo_topk))]
 
     return {
         'filename': filename,
-        'event_label': data['metadata']['label_explained'],
+        'event_label': data['metadata']['id_explained'],
         'actual_score': data['metadata']['true_score'],
         **score_curves
     }
 
 
-def get(method: str, model_name: str, base_path: str, mask_percentage, window_size):
-    model, feature_extractor = get_model_and_extractor(model_name)
+def get(method, mask_percentage, window_size, mask_type, function, base_path, dataset):
     results = []
     
-    for root, _, files in tqdm(os.walk(os.path.join(base_path, 'audioset_audios_eval'))):
-        pattern = re.compile(rf'ft_.*_p{mask_percentage}_m{window_size}\.json$')
+    for root, _, files in tqdm(os.walk(os.path.join(base_path, f'explanations_{dataset}'))):
+        pattern = re.compile(rf'ft_.*_p{mask_percentage}_m{window_size}_f{function}_m{mask_type}\.json$')
         json_files = [f for f in files if pattern.match(f)]
 
         for json_file in json_files:
@@ -168,41 +144,69 @@ def get(method: str, model_name: str, base_path: str, mask_percentage, window_si
             with open(file_path, 'r') as file:
                 data = json.load(file)
             
-            audio_path = os.path.join('/mnt/shared/alpha/hdd6T/Datasets/audioset_eval_wav/', 
-                                    f"{data['metadata']['filename']}.wav")
-            
             try:
-                result = process_audio_file(audio_path, data, model, feature_extractor, method, mask_percentage, window_size)
+                result = process_audio_file(data, dataset, method, mask_type)
                 results.append(result)
             except Exception as e:
                 print(f"Error processing {file_path}: {str(e)}")
                 continue
     
-    # Save results
-    output_dir = os.path.join(base_path, 'audioset_evaluation/leo_metric/hyperparams')
+    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
     os.makedirs(output_dir, exist_ok=True)
     
     pred_df = pd.DataFrame(results)
-    pred_df.to_csv(os.path.join(output_dir, f'score_curve_{method}_p{mask_percentage}_m{window_size}.tsv'), sep='\t', index=False)
+    pred_df.to_csv(os.path.join(output_dir, f'score_curve_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}.tsv'), sep='\t', index=False)
+
+
+def get_with_name(method: str, name, base_path: str, dataset, mask_type):
+    results = []
+    
+    for root, _, files in tqdm(os.walk(os.path.join(base_path, f'explanations_{dataset}'))):
+        pattern = re.compile(rf'ft_.*_{name}\.json$')
+        json_files = [f for f in files if pattern.match(f)]
+        
+        for json_file in json_files:
+            file_path = os.path.join(root, json_file)
+            try:
+                with open(file_path, "r") as file:
+                    data = json.load(file)
+            except json.JSONDecodeError as e:
+                print(f"JSON error: {e}. Retrying {file_path}")
+           
+            result = process_audio_file(data, dataset, method, mask_type)
+            results.append(result)
+        
+    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
+    os.makedirs(output_dir, exist_ok=True)
+    
+    pred_df = pd.DataFrame(results)
+    pred_df.to_csv(os.path.join(output_dir, f'score_curve_{method}_{name}.tsv'), sep='\t', index=False)
+
 
 
 def main():
     parser = argparse.ArgumentParser(description='Process AudioSet data and generate evaluation files.')
     parser.add_argument('--base_path', type=str,
-                      default='/home/cbolanos/experiments',
+                      default='/home/ec2-user/results1',
                       help='Base path for AudioSet experiments')
-
     args = parser.parse_args()
-   
-    # for mask_percentage in [0.1, 0.15, 0.2, 0.3, 0.4]:
-        # for window_size in [1, 2, 3, 4, 5, 6]:
+
+    names = ["zeros", "noise", "stat", "all"]
+
+    # Select dataset to run
+
+    dataset = 'kws'
+    for function in ['euclidean']:
+        for mask_type in ['zeros', 'stat', 'noise']:
+            for mask_percentage in [0.2, 0.3, 0.4]:
+                for window_size in [1, 3, 5]:
+                    for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, dataset)
+    
+    for name in names:
+        for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+            get_with_name(method, name, args.base_path, dataset, name)
 
 
-    for mask_percentage, window_size in [(0.1, 4), (0.1, 5), (0.1, 6)]:
-        for method in ['shap', 'tree_importance', 'naive', 'linear_regression']:
-                get(method, "ast", args.base_path, mask_percentage, window_size)
-
-    for method in ['linear_regression']:
-        get(method, "ast", args.base_path, 0.15, 6)
 if __name__ == '__main__':
     main()
