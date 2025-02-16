@@ -26,8 +26,8 @@ class RandomDataGenerator:
             Path(self.path) / filename / self.model_name /
             f"scores_{self.name}.json"
         )
-        if os.path.exists(output_file):
-            return
+        # if os.path.exists(output_file):
+        #     return
 
         # Step 2: Generate all possible combinations
         all_combinations = list(product(
@@ -57,7 +57,7 @@ class RandomDataGenerator:
             )
         with open(chosen_file, "r") as f:
             data = json.load(f)
-        snrs.append(data["'snrs"][0])
+        snrs.append(data["snrs"][0])
         scores.append(data["scores"][0])
         neighborhood.append(data["neighborhood"][0])
 
@@ -91,7 +91,7 @@ class RandomDataGenerator:
 
         # Step 8: Save the new file
         output_file.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
-
+        
         with open(output_file, "w") as f:
             json.dump(data_to_save, f, indent=4)
 
