@@ -51,6 +51,16 @@ class RandomDataGenerator:
         neighborhood = []
         snrs = []
 
+        chosen_file = (
+                Path(self.path) / filename / self.model_name /
+                f"scores_p0.4_w3_feuclidean_mzeros.json"
+            )
+        with open(chosen_file, "r") as f:
+            data = json.load(f)
+        snrs.append(data["'snrs"][0])
+        scores.append(data["scores"][0])
+        neighborhood.append(data["neighborhood"][0])
+
         for mask_type, mask_percentage, window_size, function in samples:
             chosen_file = (
                 Path(self.path) / filename / self.model_name /
