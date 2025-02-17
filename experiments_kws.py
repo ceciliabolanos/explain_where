@@ -13,15 +13,11 @@ NUM_SAMPLES = 3000
 df = pd.read_csv(LABELS_PATH)
 
 
-# mask_percentages = [0.2, 0.4, 0.3]
-# window_sizes = [1,5, 3]
-# mask_types = ['zeros', 'stat', 'noise']
+mask_percentages = [0.2, 0.4, 0.3]
+window_sizes = [1,5, 3]
+mask_types = ['zeros', 'stat', 'noise']
 
-# # Redirect stdout to a log file
-# log_file_path = '/home/ec2-user/results1/process_log_kws.txt'
-# sys.stdout = open(log_file_path, 'w')
-
-# print("Starting explanation generation for KWS model.")
+print("Starting explanation generation for KWS model.")
 
 # for mask_type in mask_types:
 #     for window_size in window_sizes: 
@@ -35,10 +31,9 @@ df = pd.read_csv(LABELS_PATH)
             
 #             # Print the configuration being used
 #             print(f"Using mask_type: {mask_type}, window_size: {window_size}, mask_percentage: {mask_percentage}")
-#             j = 0   
 #             for i in tqdm(range(len(df))):
 #                 filename = df.loc[i, 'filename']
-#                 if j < 50:
+#                 if i < 50:
 #                     try:
 #                         # Print the explanation generation process
 #                         print(f"Generating explanation for {filename} (Sample {i+1}/{len(df)})")
@@ -55,30 +50,24 @@ df = pd.read_csv(LABELS_PATH)
 #                         print(f"Error generating explanation for {filename}: {e}")
             
 #                 torch.cuda.empty_cache()
-#                 del filename
-#                 j = j + 1
-#             # Print progress in the loop
-            
-#             print(f"Finished processing for mask_type: {mask_type}, window_size: {window_size}, mask_percentage: {mask_percentage}, j={j}")
+#                 del filename            
+#             print(f"Finished processing for mask_type: {mask_type}, window_size: {window_size}, mask_percentage: {mask_percentage}")
 
-# print("Explanation generation process completed.")
-
-# # Close the log file when done
-# sys.stdout.close()
+print("Explanation generation process completed.")
 
 
 mask_configs = [
-    {"0.2-1": {"mask_percentage": [0.2], "possible_windows": [1], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    {"0.2-3": {"mask_percentage": [0.2], "possible_windows": [3], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    {"0.2-5": {"mask_percentage": [0.2], "possible_windows": [5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+    # {"0.2-1": {"mask_percentage": [0.2], "possible_windows": [1], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+    # {"0.2-3": {"mask_percentage": [0.2], "possible_windows": [3], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+    # {"0.2-5": {"mask_percentage": [0.2], "possible_windows": [5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
     
-    {"0.3-1": {"mask_percentage": [0.3], "possible_windows": [1], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    {"0.3-3": {"mask_percentage": [0.3], "possible_windows": [3], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    {"0.3-5": {"mask_percentage": [0.3], "possible_windows": [5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+    # {"0.3-1": {"mask_percentage": [0.3], "possible_windows": [1], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+    # {"0.3-3": {"mask_percentage": [0.3], "possible_windows": [3], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+    # {"0.3-5": {"mask_percentage": [0.3], "possible_windows": [5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
     
-    {"0.4-1": {"mask_percentage": [0.4], "possible_windows": [1], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    {"0.4-3": {"mask_percentage": [0.4], "possible_windows": [3], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
-    {"0.4-5": {"mask_percentage": [0.4], "possible_windows": [5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+    # {"0.4-1": {"mask_percentage": [0.4], "possible_windows": [1], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+    # {"0.4-3": {"mask_percentage": [0.4], "possible_windows": [3], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
+    # {"0.4-5": {"mask_percentage": [0.4], "possible_windows": [5], "possible_mask_types": ['zeros', 'stat', 'noise'], "combinations": 3}},
     
     {"zeros": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['zeros'], "combinations": 9}},
     {"noise": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['noise'], "combinations": 9}},
