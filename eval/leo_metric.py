@@ -117,11 +117,35 @@ def process_audio_file(data, method, intersection):
         'true_markers': times_gt,
     }
 
+def get_audioset(method: str, mask_percentage, window_size, mask_type, function, base_path: str, dataset, intersection):
+    results = []
+    selected_files = pd.read_csv('/home/ec2-user/explain_where/preprocess/files_to_process.csv')
+    
+    for i in tqdm(range(len(selected_files))):
+        id = int(selected_files.loc[i]['event_label'])
+        filename = selected_files.loc[i]['filename']
+        file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft_{id}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}.json'
+        try:
+            with open(file_path, "r") as file:
+                data = json.load(file)
+        except json.JSONDecodeError as e:
+            print(f"JSON error: {e}. Retrying {file_path}")
+        
+        result = process_audio_file(data, method, intersection)
+        results.append(result)
+        
+    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
+    os.makedirs(output_dir, exist_ok=True)
+    
+    pred_df = pd.DataFrame(results)
+    pred_df.to_csv(os.path.join(output_dir, f'leo_metric_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_{intersection}.tsv'), sep='\t', index=False)
+
+
 def get(method: str, mask_percentage, window_size, mask_type, function, base_path: str, dataset, intersection):
     results = []
     
     for root, _, files in tqdm(os.walk(os.path.join(base_path, f'explanations_{dataset}'))):
-        pattern = re.compile(rf'ft1_.*_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}\.json$')
+        pattern = re.compile(rf'ft_.*_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}\.json$')
         json_files = [f for f in files if pattern.match(f)]
         
         for json_file in json_files:
@@ -141,12 +165,35 @@ def get(method: str, mask_percentage, window_size, mask_type, function, base_pat
     pred_df = pd.DataFrame(results)
     pred_df.to_csv(os.path.join(output_dir, f'leo_metric_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_{intersection}.tsv'), sep='\t', index=False)
 
+def get_with_name_audioset(method: str, name, base_path: str, dataset, intersection):
+    results = []
+    selected_files = pd.read_csv('/home/ec2-user/explain_where/preprocess/files_to_process.csv')
+    
+    for i in tqdm(range(len(selected_files))):
+        id = int(selected_files.loc[i]['event_label'])
+        filename = selected_files.loc[i]['filename']
+        file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft1_{id}_{name}.json'
+        try:
+            with open(file_path, "r") as file:
+                data = json.load(file)
+        except json.JSONDecodeError as e:
+            print(f"JSON error: {e}. Retrying {file_path}")
+        
+        result = process_audio_file(data, method, intersection)
+        results.append(result)
+
+    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
+    os.makedirs(output_dir, exist_ok=True)
+    
+    pred_df = pd.DataFrame(results)
+    pred_df.to_csv(os.path.join(output_dir, f'leo_metric_{method}_{name}_{intersection}.tsv'), sep='\t', index=False)
+
 
 def get_with_name(method: str, name, base_path: str, dataset, intersection):
     results = []
     
     for root, _, files in tqdm(os.walk(os.path.join(base_path, f'explanations_{dataset}'))):
-        pattern = re.compile(rf'ft_.*_{name}\.json$')
+        pattern = re.compile(rf'ft1_.*_{name}\.json$')
         json_files = [f for f in files if pattern.match(f)]
         
         for json_file in json_files:
@@ -177,16 +224,28 @@ def main():
     # Select the dataset to run
 
     names = ["zeros", "noise", "stat", "all"] 
-    dataset = 'kws'
+
     for function in ['euclidean']:
         for mask_type in ['zeros', 'stat', 'noise']:
             for mask_percentage in [0.2, 0.3, 0.4]:
                 for window_size in [1, 3, 5]:
                     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, dataset, 0)
+                        get_audioset(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0)
+    
     for name in names:
         for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-            get_with_name(method, name, args.base_path, dataset, 0)
+            get_with_name_audioset(method, name, args.base_path, 'audioset', 0)
+    
+    # dataset = 'kws'
+    # for function in ['euclidean']:
+    #     for mask_type in ['zeros', 'stat', 'noise']:
+    #         for mask_percentage in [0.2, 0.3, 0.4]:
+    #             for window_size in [1, 3, 5]:
+    #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, dataset, 0)
+    # for name in names:
+    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #         get_with_name(method, name, args.base_path, dataset, 0)
   
     # names = ["0.2-1", "0.2-3", "0.2-5",
     #         "0.3-1", "0.3-3", "0.3-5",
