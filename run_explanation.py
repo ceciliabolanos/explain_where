@@ -1,6 +1,7 @@
 from explainers.random_forest import RFExplainer
 from explainers.linear_regression import LRExplainer
 from explainers.linear_regression_noconstrain import LRnoconExplainer
+from explainers.utils import compute_log_odds
 
 from explainers.kernel_shap import KernelShapExplainer
 from explainers.kernel_shap_1constrain import KernelShapExplainer1constraint
@@ -44,9 +45,15 @@ def generate_explanation(filename: str,
        complete_filename = filename
        filename = os.path.basename(filename)
     
-    input, real_score_id = model.process_input()     
+    input, outputs = model.process_input()
+    real_score_id = outputs[id_to_explain]      
     predict_fn = model.get_predict_fn()   
-    pred_zeros = predict_fn([np.zeros(len(input))])[0]
+
+    pred_zeros = predict_fn([np.zeros(len(input))])
+    if model_name == 'drums':
+        empty_score = compute_log_odds(pred_zeros, id_to_explain)[0]
+    else:
+        empty_score = pred_zeros[0][id_to_explain]
 
     ############## Generate data ##############
     data_generator = WindowMaskingDataGenerator(
@@ -68,7 +75,7 @@ def generate_explanation(filename: str,
     if not os.path.exists(Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"):
         data_generator.generate(filename)
 
-    # ######### Generate the importances for each method ##########
+    ######### Generate the importances for each method ##########
     output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"
 
     if os.path.exists(output_path):
@@ -78,21 +85,19 @@ def generate_explanation(filename: str,
         path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
     )
     importances_kernelshap = kernelshap_analyzer.explain_instance(
-        label_to_explain=id_to_explain, empty_score=pred_zeros[id_to_explain]
-    ).get_feature_importances()
+        label_to_explain=id_to_explain, empty_score=empty_score, model=model_name).get_feature_importances()
 
     kernelshap_analyzer_1constraint = KernelShapExplainer1constraint(
         path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
     )
     importances_kernelshap_analyzer_1constraint = kernelshap_analyzer_1constraint.explain_instance(
-        label_to_explain=id_to_explain, empty_score=pred_zeros[id_to_explain]
-    ).get_feature_importances()
+        label_to_explain=id_to_explain, empty_score=empty_score, model=model_name).get_feature_importances()
 
     rf_analyzer = RFExplainer(
         path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
         filename=filename,
     )
-    importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
+    importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree', model=model_name)
 
     # LR analysis
     lime_nocon_analyzer = LRnoconExplainer(
@@ -101,8 +106,7 @@ def generate_explanation(filename: str,
         absolute_feature_sort=False
     )
     importances_nocon = lime_nocon_analyzer.explain_instance(
-        label_to_explain=id_to_explain
-    ).get_feature_importances()
+        label_to_explain=id_to_explain, model=model_name).get_feature_importances()
     
     lime_analyzer = LRExplainer(
         Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
@@ -110,8 +114,7 @@ def generate_explanation(filename: str,
         absolute_feature_sort=False
     )
     importances_lime = lime_analyzer.explain_instance(
-        label_to_explain=id_to_explain
-    ).get_feature_importances()
+        label_to_explain=id_to_explain, model=model_name).get_feature_importances()
     
     true_markers = get_segments(complete_filename, id_to_explain, model_name)
     ############## Prepare output ##############
@@ -149,8 +152,6 @@ def generate_explanation(filename: str,
             }
         }
     }
-
-    # Save results
    
     with open(output_path, 'w') as f:
         json.dump(output_data, f, indent=2)
@@ -185,34 +186,41 @@ def generate_explanation_from_file(filename: str,
        complete_filename = filename
        filename = os.path.basename(filename)
     
-    output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_{name}.json"
+    output_path = Path(path) / filename / model_name / f"ft1_{id_to_explain}_{name}.json"
+    
     if os.path.exists(output_path):
-        print(output_path)
         return 
     
-    input, real_score_id = model.process_input()     
+    input, outputs = model.process_input()
+    real_score_id = outputs[id_to_explain]        
     predict_fn = model.get_predict_fn()   
-    pred_zeros = predict_fn([np.zeros(len(input))])[0]
-    
+
+    pred_zeros = predict_fn([np.zeros(len(input))])
+
+    if model_name == 'drums':
+        empty_score = compute_log_odds(pred_zeros, id_to_explain)[0]
+    elif model_name == 'kws':
+        empty_score = pred_zeros[id_to_explain]
+    else:
+        empty_score = pred_zeros[0][id_to_explain]
+        
     kernelshap_analyzer = KernelShapExplainer(
         path= Path(path) / filename / model_name / f"scores_{name}.json",
     )
     importances_kernelshap = kernelshap_analyzer.explain_instance(
-        label_to_explain=id_to_explain, empty_score=pred_zeros[id_to_explain]
-    ).get_feature_importances()
+        label_to_explain=id_to_explain, empty_score=empty_score, model=model_name).get_feature_importances()
 
     kernelshap_analyzer_1constraint = KernelShapExplainer1constraint(
         path= Path(path) / filename / model_name / f"scores_{name}.json",
     )
     importances_kernelshap_analyzer_1constraint = kernelshap_analyzer_1constraint.explain_instance(
-        label_to_explain=id_to_explain, empty_score=pred_zeros[id_to_explain]
-    ).get_feature_importances()
+        label_to_explain=id_to_explain, empty_score=empty_score, model=model_name).get_feature_importances()
 
     rf_analyzer = RFExplainer(
         path= Path(path) / filename / model_name / f"scores_{name}.json",
         filename=filename,
     )
-    importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
+    importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree', model=model_name)
 
     # LR analysis
     lime_nocon_analyzer = LRnoconExplainer(
@@ -221,8 +229,7 @@ def generate_explanation_from_file(filename: str,
         absolute_feature_sort=False
     )
     importances_nocon = lime_nocon_analyzer.explain_instance(
-        label_to_explain=id_to_explain
-    ).get_feature_importances()
+        label_to_explain=id_to_explain, model=model_name).get_feature_importances()
     
     lime_analyzer = LRExplainer(
         Path(path) / filename / model_name / f"scores_{name}.json",
@@ -230,8 +237,7 @@ def generate_explanation_from_file(filename: str,
         absolute_feature_sort=False
     )
     importances_lime = lime_analyzer.explain_instance(
-        label_to_explain=id_to_explain
-    ).get_feature_importances()
+        label_to_explain=id_to_explain, model=model_name).get_feature_importances()
     
     true_markers = get_segments(complete_filename, id_to_explain, model_name)
     ############## Prepare output ##############
@@ -273,12 +279,6 @@ def generate_explanation_from_file(filename: str,
         json.dump(output_data, f, indent=2)
 
     print(f"Importance scores saved to: {output_path}")
-    # Save results
    
-    with open(output_path, 'w') as f:
-        json.dump(output_data, f, indent=2)
-
-    print(f"Importance scores saved to: {output_path}")
-
     return 
 
