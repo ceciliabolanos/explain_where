@@ -165,12 +165,12 @@ def get(method: str, mask_percentage, window_size, mask_type, function, base_pat
     pred_df = pd.DataFrame(results)
     pred_df.to_csv(os.path.join(output_dir, f'leo_metric_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_{intersection}.tsv'), sep='\t', index=False)
 
-def get_with_name_audioset(method: str, name, base_path: str, dataset, intersection):
+def get_with_name_audioset(method: str, name, base_path: str, dataset, intersection,id):
     results = []
     selected_files = pd.read_csv('/home/ec2-user/explain_where/preprocess/files_to_process.csv')
     
     for i in tqdm(range(len(selected_files))):
-        id = int(selected_files.loc[i]['event_label'])
+        id1 = int(selected_files.loc[i]['event_label'])
         filename = selected_files.loc[i]['filename']
         file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft1_{id}_{name}.json'
         try:
@@ -182,7 +182,7 @@ def get_with_name_audioset(method: str, name, base_path: str, dataset, intersect
         result = process_audio_file(data, method, intersection)
         results.append(result)
 
-    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
+    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_music/')
     os.makedirs(output_dir, exist_ok=True)
     
     pred_df = pd.DataFrame(results)
@@ -223,18 +223,18 @@ def main():
 
     # Select the dataset to run
 
-    names = ["zeros", "noise", "stat", "all"] 
+    # names = ["zeros", "noise", "stat", "all"] 
 
-    for function in ['euclidean']:
-        for mask_type in ['zeros', 'stat', 'noise']:
-            for mask_percentage in [0.2, 0.3, 0.4]:
-                for window_size in [1, 3, 5]:
-                    for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get_audioset(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0)
+    # for function in ['euclidean']:
+    #     for mask_type in ['zeros', 'stat', 'noise']:
+    #         for mask_percentage in [0.2, 0.3, 0.4]:
+    #             for window_size in [1, 3, 5]:
+    #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #                     get_audioset(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0)
     
-    for name in names:
-        for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-            get_with_name_audioset(method, name, args.base_path, 'audioset', 0)
+    # for name in names:
+    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #         get_with_name_audioset(method, name, args.base_path, 'audioset', 0, 137)
     
     # dataset = 'kws'
     # for function in ['euclidean']:
@@ -243,9 +243,11 @@ def main():
     #             for window_size in [1, 3, 5]:
     #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
     #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, dataset, 0)
-    # for name in names:
-    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-    #         get_with_name(method, name, args.base_path, dataset, 0)
+    names = ["zeros", "noise"] 
+
+    for name in names:
+        for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+            get_with_name(method, name, args.base_path, 'kws', 0)
   
     # names = ["0.2-1", "0.2-3", "0.2-5",
     #         "0.3-1", "0.3-3", "0.3-5",
