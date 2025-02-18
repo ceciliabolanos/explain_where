@@ -53,4 +53,4 @@ class ASTModel():
             logits = self.model(**inputs).logits
 
         pred_emotion = logits.cpu().tolist()[0][self.id_to_explain]
-        return wav_data, pred_emotion
+        return wav_data, logits.cpu().tolist()[0]

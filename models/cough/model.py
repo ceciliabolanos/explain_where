@@ -108,5 +108,5 @@ class CoughModel():
         # Extract predicted emotion
         pred_emotion = logits.cpu().tolist()[0][self.id_to_explain]
         
-        return x, pred_emotion
+        return x, logits.cpu().tolist()[0]
     
