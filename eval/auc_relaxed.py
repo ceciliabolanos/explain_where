@@ -175,23 +175,24 @@ def get_audioset(method: str, mask_percentage, window_size, mask_type, function,
     pred_df.to_csv(os.path.join(output_dir, f'auc_relaxed_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_{intersection}.tsv'), sep='\t', index=False)
 
 
-def get_with_name_audioset(method: str, name, base_path: str, dataset, intersection):
+def get_with_name_audioset(method: str, name, base_path: str, dataset, intersection, id):
     results = []
     selected_files = pd.read_csv('/home/ec2-user/explain_where/preprocess/files_to_process.csv')
     for i in tqdm(range(len(selected_files))):
-        id = int(selected_files.loc[i]['event_label'])
+        id1 = int(selected_files.loc[i]['event_label'])
         filename = selected_files.loc[i]['filename']
         file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft1_{id}_{name}.json'
-        try:
-            with open(file_path, "r") as file:
-                data = json.load(file)
-        except json.JSONDecodeError as e:
-            print(f"JSON error: {e}. Retrying {file_path}")
+        if id1 == id:
+            try:
+                with open(file_path, "r") as file:
+                    data = json.load(file)
+            except json.JSONDecodeError as e:
+                print(f"JSON error: {e}. Retrying {file_path}")
+            
+            result = process_audio_file(data, method, intersection)
+            results.append(result)
         
-        result = process_audio_file(data, method, intersection)
-        results.append(result)
-        
-    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
+    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_dog/')
     os.makedirs(output_dir, exist_ok=True)
     
     pred_df = pd.DataFrame(results)
@@ -229,34 +230,34 @@ def main():
                       help='Base path for AudioSet experiments')
     args = parser.parse_args()
 
-    names = ["zeros", "noise", "stat", "all"]
+    names = ["zeros", "noise"]
 
-    # # Select dataset to run
-    for function in ['euclidean']:
-        for mask_type in ['zeros', 'stat', 'noise']:
-            for mask_percentage in [0.2, 0.3, 0.4]:
-                for window_size in [1, 3, 5]:
-                    for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get_audioset(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0.09)
+    # Select dataset to run
     
-    for name in names:
-        for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-            get_with_name_audioset(method, name, args.base_path, 'audioset', 0.09)
+    for dataset in ['audioset', 'cough', 'kws', 'drums']:
+        for id in [0, 137, 74]:
+            for name in names:
+                for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+                    if dataset == 'audioset':
+                        get_with_name_audioset(method, name, args.base_path, dataset, 0.09, id)
+                    else:    
+                        get_with_name(method, name, args.base_path, dataset, 0.09)
 
-    # dataset = 'kws'
+    # for function in ['euclidean']:
+    #     for mask_type in ['zeros', 'stat', 'noise']:
+    #         for mask_percentage in [0.2, 0.3, 0.4]:
+    #             for window_size in [1, 3, 5]:
+    #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #                     get_audioset(method, mask_percentage, window_size, mask_type, function, args.base_path, 'audioset', 0.09)
+    
+
+    # dataset = 'cough'
     # for function in ['euclidean']:
     #     for mask_type in ['zeros', 'stat', 'noise']:
     #         for mask_percentage in [0.2, 0.3, 0.4]:
     #             for window_size in [1, 3, 5]:
     #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
     #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, dataset, 0.09)
-    # for name in names:
-    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-    #         get_with_name(method, name, args.base_path, dataset, 0.09)
-
-
-
-
 if __name__ == '__main__':
     main()
 
