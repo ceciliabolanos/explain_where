@@ -182,19 +182,28 @@ def get_with_name_audioset(method: str, name, base_path: str, dataset, intersect
         id1 = int(selected_files.loc[i]['event_label'])
         filename = selected_files.loc[i]['filename']
         file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft1_{id}_{name}.json'
-        if id1 == id:
-            try:
-                with open(file_path, "r") as file:
-                    data = json.load(file)
-            except json.JSONDecodeError as e:
-                print(f"JSON error: {e}. Retrying {file_path}")
-            
-            result = process_audio_file(data, method, intersection)
-            results.append(result)
+        if os.path.exists(file_path):
+            print(file_path)
+            if id1 == id:
+                try:
+                    with open(file_path, "r") as file:
+                        data = json.load(file)
+                    result = process_audio_file(data, method, intersection)
+                except json.JSONDecodeError as e:
+                        print(f"JSON error: {e}. Skipping {file_path}")
+                        result = None  # Append None in case of JSON error
+                results.append(result)
+           
         
-    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_dog/')
+    if id == 0:
+        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_speech/')
+    if id == 137:
+        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_music/')
+    if id == 74:
+        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_dog/')
     os.makedirs(output_dir, exist_ok=True)
-    
+
+    results = [r for r in results if r is not None]
     pred_df = pd.DataFrame(results)
     pred_df.to_csv(os.path.join(output_dir, f'auc_relaxed_{method}_{name}_{intersection}.tsv'), sep='\t', index=False)
 
@@ -211,10 +220,13 @@ def get_with_name(method: str, name, base_path: str, dataset, intersection):
             try:
                 with open(file_path, "r") as file:
                     data = json.load(file)
+                result = process_audio_file(data, method, intersection)
             except json.JSONDecodeError as e:
-                print(f"JSON error: {e}. Retrying {file_path}")
+                    print(f"JSON error: {e}. Skipping {file_path}")
+                    result = None  # Append None in case of JSON error
+            results.append(result)
            
-            result = process_audio_file(data, method, intersection)
+           
             results.append(result)
         
     output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
@@ -232,9 +244,10 @@ def main():
 
     names = ["zeros", "noise"]
 
-    # Select dataset to run
+    # # Select dataset to run
     
-    for dataset in ['audioset', 'cough', 'kws', 'drums']:
+    # for dataset in ['audioset', 'cough', 'kws', 'drums']:
+    for dataset in ['audioset']:    
         for id in [0, 137, 74]:
             for name in names:
                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
@@ -243,6 +256,10 @@ def main():
                     else:    
                         get_with_name(method, name, args.base_path, dataset, 0.09)
 
+    for dataset in ['kws']:    
+            for name in names:
+                for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+                    get_with_name(method, name, args.base_path, dataset, 0.09)
     # for function in ['euclidean']:
     #     for mask_type in ['zeros', 'stat', 'noise']:
     #         for mask_percentage in [0.2, 0.3, 0.4]:

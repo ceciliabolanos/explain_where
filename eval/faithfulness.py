@@ -6,9 +6,12 @@ import pandas as pd
 import argparse
 import re
 import numpy as np
-from models.ast import ASTModel
-from models.drums import DrumsModel
-from models.kws import KWSModel
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from models.ast.model import ASTModel
+from models.drums.model import DrumsModel
+from models.kws.model import KWSModel
 
 def get_audio_base(wav_data, masking_type, segment_length, sr=16000, overlap=0):
     if masking_type not in {"zeros", "noise", "stat", "all"}:
@@ -52,7 +55,7 @@ def get_audio_base(wav_data, masking_type, segment_length, sr=16000, overlap=0):
 
 def process_audio_file(data, dataset, method, masking_type):
     filename = data["metadata"]['filename']
-    id_explained = data['metadata']['id_explained']
+    id_explained = int(data['metadata']['id_explained'])
     segment_length = data["metadata"]['segment_length']
     overlap = 0 
     granularidad_ms = segment_length - overlap
@@ -60,11 +63,14 @@ def process_audio_file(data, dataset, method, masking_type):
     if dataset == 'audioset':
        model = ASTModel(filename, id_explained) 
     if dataset == 'drums':
-       model = DrumsModel(filename, id_explained) 
+       complete_filename = f'mnt/data/drum_dataset/{filename}'
+       model = DrumsModel(complete_filename, id_explained) 
        filename = os.path.basename(filename)
     if dataset == 'kws':
-       model = KWSModel(filename, id_explained) 
-       filename = os.path.basename(filename)
+       session = filename.split('-')[0]
+       folder = filename.split('-')[1]
+       complete_filename = f'mnt/data/LibriSpeech24K/test-clean/{session}/{folder}/{filename}'
+       model = KWSModel(complete_filename, id_explained) 
     
     wav_data, real_score_id = model.process_input()     
     predict_fn = model.get_predict_fn()   
@@ -113,21 +119,27 @@ def process_audio_file(data, dataset, method, masking_type):
         start_idx_d = int(batch_times_d[0] * 16000)
         end_idx_d = int(batch_times_d[-1] * 16000)
         audio_sacando_topk[start_idx_d:end_idx_d] = audio_baseline[start_idx_d:end_idx_d]
-        audio_solo_topk[start_idx_d:end_idx_d] = wav_data[start_idx_d:end_idx_d]
+        # audio_solo_topk[start_idx_d:end_idx_d] = wav_data[start_idx_d:end_idx_d]
 
         list_audio_sacando_topk.append(audio_sacando_topk.copy())
         list_solo_topk.append(audio_solo_topk.copy())
+        
+        # Process in larger chunks (50 at a time)
+        if len(list_audio_sacando_topk) >= 32 or i + batch_size >= len(sorted_importances_d):
+            results_descending = predict_fn(list_audio_sacando_topk)
+            # results_ascending = predict_fn(list_solo_topk)
 
+            score_curves['score_curve_sacando_topk'].extend(results_descending)
+            # score_curves['score_curve_consolo_topk'].extend(results_ascending)
 
-    results_descending = predict_fn(list_audio_sacando_topk)
-    results_ascending = predict_fn(list_solo_topk)
-    score_curves['score_curve_sacando_topk'] = [results_descending[i] for i in range(len(list_audio_sacando_topk))]
-    score_curves['score_curve_consolo_topk'] = [results_ascending[i] for i in range(len(list_solo_topk))]
+            # Free up memory
+            list_audio_sacando_topk.clear()
+            # list_solo_topk.clear()
 
     return {
         'filename': filename,
         'event_label': data['metadata']['id_explained'],
-        'actual_score': data['metadata']['true_score'],
+        'actual_score': real_score_id,
         **score_curves
     }
 
@@ -136,7 +148,7 @@ def get(method, mask_percentage, window_size, mask_type, function, base_path, da
     results = []
     
     for root, _, files in tqdm(os.walk(os.path.join(base_path, f'explanations_{dataset}'))):
-        pattern = re.compile(rf'ft_.*_p{mask_percentage}_m{window_size}_f{function}_m{mask_type}\.json$')
+        pattern = re.compile(rf'ft_.*_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}\.json$')
         json_files = [f for f in files if pattern.match(f)]
 
         for json_file in json_files:
@@ -158,11 +170,65 @@ def get(method, mask_percentage, window_size, mask_type, function, base_path, da
     pred_df.to_csv(os.path.join(output_dir, f'score_curve_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}.tsv'), sep='\t', index=False)
 
 
+def get_audioset(method: str, mask_percentage, window_size, mask_type, function, base_path: str, dataset):
+    results = []
+    selected_files = pd.read_csv('/home/ec2-user/explain_where/preprocess/files_to_process.csv')
+    for i in tqdm(range(len(selected_files))):
+        id = int(selected_files.loc[i]['event_label'])
+        filename = selected_files.loc[i]['filename']
+        file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft_{id}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}.json'
+        try:
+            with open(file_path, "r") as file:
+                data = json.load(file)
+        except json.JSONDecodeError as e:
+            print(f"JSON error: {e}. Retrying {file_path}")
+        
+        result = process_audio_file(data, dataset, method, mask_type)
+        results.append(result)
+    
+    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
+    os.makedirs(output_dir, exist_ok=True)
+    
+    pred_df = pd.DataFrame(results)
+    pred_df.to_csv(os.path.join(output_dir,f'score_curve_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}.tsv'), sep='\t', index=False)
+
+
+def get_with_name_audioset(method: str, name, base_path: str, dataset, mask_type, id):
+    results = []
+    selected_files = pd.read_csv('/home/ec2-user/explain_where/preprocess/files_to_process.csv')
+    for i in tqdm(range(len(selected_files))):
+        id1 = int(selected_files.loc[i]['event_label'])
+        filename = selected_files.loc[i]['filename']
+        file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft1_{id}_{name}.json'
+        if os.path.exists(file_path):
+            if id1 == id:
+                try:
+                    with open(file_path, "r") as file:
+                        data = json.load(file)
+                    result = process_audio_file(data, dataset, method, mask_type)
+                except json.JSONDecodeError as e:
+                    print(f"JSON error: {e}. Skipping {file_path}")
+                    result = None  # Append None in case of JSON error
+                results.append(result)
+    
+    if id == 0:
+        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_speech/')
+    if id == 137:
+        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_music/')
+    if id == 74:
+        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_dog/')
+    os.makedirs(output_dir, exist_ok=True)
+
+    results = [r for r in results if r is not None]
+    pred_df = pd.DataFrame(results)
+    pred_df.to_csv(os.path.join(output_dir, f'score_curve_{method}_{name}.tsv'), sep='\t', index=False)
+
+
 def get_with_name(method: str, name, base_path: str, dataset, mask_type):
     results = []
     
     for root, _, files in tqdm(os.walk(os.path.join(base_path, f'explanations_{dataset}'))):
-        pattern = re.compile(rf'ft_.*_{name}\.json$')
+        pattern = re.compile(rf'ft1_.*_{name}\.json$')
         json_files = [f for f in files if pattern.match(f)]
         
         for json_file in json_files:
@@ -191,22 +257,16 @@ def main():
                       help='Base path for AudioSet experiments')
     args = parser.parse_args()
 
-    names = ["zeros", "noise", "stat", "all"]
 
-    # Select dataset to run
+    for dataset in ['audioset']:
+        for id in [0, 74, 137]:
+            for name in ['noise', 'zeros']:
+                for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+                    if dataset == 'audioset':
+                        get_with_name_audioset(method, name, args.base_path, dataset, name, id)
+                    else:    
+                        get_with_name(method, name, args.base_path, dataset, name)
 
-    dataset = 'kws'
-    for function in ['euclidean']:
-        for mask_type in ['zeros', 'stat', 'noise']:
-            for mask_percentage in [0.2, 0.3, 0.4]:
-                for window_size in [1, 3, 5]:
-                    for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                        get(method, mask_percentage, window_size, mask_type, function, args.base_path, dataset)
-    
-    for name in names:
-        for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-            get_with_name(method, name, args.base_path, dataset, name)
-
-
+   
 if __name__ == '__main__':
     main()

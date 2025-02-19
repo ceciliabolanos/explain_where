@@ -36,12 +36,6 @@ def pi_x_for_list(vectors):
         weight = shap_kernel_weight(m, z)
         weights.append(weight)
     
-    # if normalize_by_min:
-    #     min_weight = min([w for w in weights if w > 0])  # Smallest nonzero weight
-    #     weights = [w / min_weight for w in weights]
-    # elif normalize:
-    #     scaling = shap_kernel_weight(len(vectors[0]), 1)  # Normalize by z=1 weight
-    #     weights = [w / scaling for w in weights]
     if len(set(weights)) == 1:
         weights = [1] * len(weights)
     mean = sum(weights)/len(weights)

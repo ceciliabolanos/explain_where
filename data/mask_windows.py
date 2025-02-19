@@ -46,7 +46,8 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                 masked_audio[current_pos:end] = 0
 
             elif self.config.mask_type == "noise":
-                noise_std = np.random.uniform(0.01, 0.1)
+                signal_std = np.std(self.input)
+                noise_std = np.random.uniform(0.1 * signal_std, signal_std)
                 masked_audio[current_pos:end] = np.random.normal(np.mean(self.input), noise_std, end - current_pos)
 
             elif self.config.mask_type == "stat":
@@ -58,65 +59,6 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
             current_pos += step_samples
                 
         return results
-
-    # def _generate_greedy_masked(self, id_to_explain):
-    #     n_components = len(self.segment_signal(self.input))
-    #     mask_samples = int(self.sr * (self.config.segment_length / 1000))
-    #     overlap_samples = int(self.sr * (self.config.overlap / 1000))
-    #     step_samples = mask_samples - overlap_samples
-        
-    #     results_importance = []
-    #     new_masked_audio = np.copy(self.input)
-    #     processed_segments = set()
-
-    #     def apply_mask(start, end, mask_type, new_masked_audio):
-    #         masked_audio = np.copy(new_masked_audio)
-    #         if mask_type == "zeros":
-    #             masked_audio[start:end] = 0
-    #         elif mask_type == "noise":
-    #             noise_std = np.random.uniform(0.01, 0.1)
-    #             masked_audio[start:end] = np.random.normal(np.mean(self.input), noise_std, end - start)
-    #         elif mask_type == "stat":
-    #             fill_value = np.mean(self.input[start:end])
-    #             masked_audio[start:end] = fill_value
-    #         return masked_audio
-
-    #     while len(results_importance) < n_components:
-    #         prediction_original = self.predict_fn([new_masked_audio])[0][id_to_explain]
-    #         masked_audio = np.copy(new_masked_audio)
-    #         # Generate all segment positions
-    #         positions = [pos for pos in range(0, len(self.input), step_samples) if pos not in processed_segments]
-            
-    #         # Apply masks in parallel
-    #         with Pool(cpu_count()) as pool:
-    #             masked_audios = pool.starmap(
-    #                 apply_mask,
-    #                 [(pos, min(pos + mask_samples, len(self.input)), self.config.mask_type, masked_audio) for pos in positions]
-    #             )
-            
-    #         # Predict in batch
-    #         predictions = self.predict_fn(masked_audios)
-            
-    #         # Calculate differences
-    #         differences = [(pos, prediction_original - pred[0][id_to_explain]) for pos, pred in zip(positions, predictions)]
-    #         max_diff_pos, max_diff = max(differences, key=lambda x: x[1])
-            
-    #         # Mark this segment as processed
-    #         processed_segments.add(max_diff_pos)
-    #         results_importance.append(int(max_diff_pos / step_samples))
-
-    #         # Update the new_masked_audio with the max difference segment
-    #         end = min(max_diff_pos + mask_samples, len(self.input))
-    #         if self.config.mask_type == "zeros":
-    #             new_masked_audio[max_diff_pos:end] = 0
-    #         elif self.config.mask_type == "noise":
-    #             noise_std = np.random.uniform(0.01, 0.1)
-    #             new_masked_audio[max_diff_pos:end] = np.random.normal(np.mean(self.input), noise_std, end - max_diff_pos)
-    #         elif self.config.mask_type == "stat":
-    #             fill_value = np.mean(self.input[max_diff_pos:end])
-    #             new_masked_audio[max_diff_pos:end] = fill_value
-
-    #     return results_importance
 
     def segment_signal(self, S):
         """
@@ -162,7 +104,8 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                     output[start:end] = 0
 
                 elif self.config.mask_type == "noise":
-                    noise_std = np.random.uniform(0.01, 0.1)
+                    signal_std = np.std(self.input)
+                    noise_std = np.random.uniform(0.1 * signal_std, signal_std)
                     output[start:end] = np.random.normal(np.mean(self.input), noise_std, end - start)
 
                 elif self.config.mask_type == "stat":

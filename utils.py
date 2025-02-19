@@ -346,3 +346,148 @@ def create_visualization(waveform, json_file, output_file, markers=None):
         sample_rate=16000,
         markers=markers
     )
+
+import pandas as pd
+from confidence_intervals import evaluate_with_conf_int
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+import re, ast
+from IPython import embed
+
+def map_metric_name(metric):
+
+    metric_name_in_tsv = metric
+    value = metric
+
+    if metric == 'auc':
+        value = 'roc_auc'
+        intersection = '_0.05'
+    if metric == 'leo_metric':
+        intersection = '_0'
+    if metric == 'auc_relaxed':
+        value = 'roc_auc'
+        intersection = '_0.09'
+    if 'top' in metric:
+        metric_name_in_tsv = 'score_curve'
+        intersection = ''
+
+    return value, metric_name_in_tsv, intersection
+
+
+def read_results_file(file_path, metric=None, method=None, name=None, dataset=None):
+
+    try:
+        df_combination = pd.read_csv(file_path, sep='\t')
+        df_combination['method'] = method
+        df_combination['name'] = name
+        df_combination[metric] = 0
+
+        if 'top' in metric and dataset == 'audioset':
+            df_combination['score_curve_sacando_topk'] = df_combination['score_curve_sacando_topk'].apply(ast.literal_eval)
+            df_combination['event_label'] = df_combination['event_label'].apply(int)
+            df_combination['actual_score'] = df_combination['actual_score'].apply(ast.literal_eval)
+            df_combination['log_odds'] = df_combination['actual_score'].apply(compute_log_odds)
+            df_combination['log_odds_curve'] = df_combination['score_curve_sacando_topk'].apply(compute_log_odds)
+            
+            # Loop through the rows of df 
+            for index, row in df_combination.iterrows():
+                if 'adapt' in metric:
+                    perc = df_combination['event_label'][index] * 0.1
+                else:
+                    perc = int(re.sub('perc','',re.sub('top','', metric)))/100
+
+                idx = int(len(row['score_curve_sacando_topk']) * perc)
+                df_combination.at[index,metric] = float(row['log_odds'][row['event_label']] - row['log_odds_curve'][idx][row['event_label']])
+
+                if 'rel' in metric:
+                    df_combination.at[index,metric] /= row['log_odds'][row['event_label']]
+
+        if 'top' in metric and dataset != 'audioset':
+            df_combination['log_odds_curve'] = df_combination['score_curve_sacando_topk'].apply(ast.literal_eval)
+            df_combination['event_label'] = df_combination['event_label'].apply(int)
+            df_combination['log_odds'] = df_combination['actual_score'].apply(ast.literal_eval)
+            
+            # Loop through the rows of df 
+            for index, row in df_combination.iterrows():
+                if 'adapt' in metric:
+                    perc = df_combination['event_label'][index] * 0.1
+                else:
+                    perc = int(re.sub('perc','',re.sub('top','', metric)))/100
+                
+                idx = int(len(row['log_odds_curve']) * perc)
+                df_combination.at[index,metric] = row['log_odds'][row['event_label']] - row['log_odds_curve'][idx][row['event_label']]
+
+                if 'rel' in metric:
+                    df_combination.at[index,metric] /= row['log_odds'][row['event_label']]
+        return df_combination
+
+    except FileNotFoundError:
+        raise Exception(f"File not found: {file_path}")
+
+def mean_with_confint(samples):
+    return evaluate_with_conf_int(np.array(samples), np.mean)
+
+
+def barplot_with_ci(ax, data, dataset_name, metric, figsize=None, colormap='Spectral', legend=False):
+    """ Make a bar plot for the input data. This should be a dictionary with one entry for each
+    name in the legend (eg, each system). For each of those, the value should be another dictionary
+    with one entry for each group being plotted (eg, each dataset). The entries within that inner
+    dictionary should be a list with the center of the bar (the performance measured on the full
+    test set), and the confidence interval as a list.
+    For example:
+
+        data = {'sys1': {'db1': (center11, (min11, max11)), 'db2': (center12, (min12, max12))},
+                'sys2': {'db1': (center21, (min21, max21)), 'db2': (center22, (min22, max22))}}
+
+        """
+
+    cmap = matplotlib.cm.get_cmap(colormap)
+    colors = [cmap(i/len(data)) for i in np.arange(len(data))]
+    colors = [ 'royalblue', 'indianred', 'yellowgreen', 'grey']
+
+    # The groups should be the same for all labels
+    allgroups = list(data.values())[0].keys()
+
+    barWidth = 1/(len(data)+1)
+
+    group_starts = np.arange(len(allgroups))
+
+    for j, (lname, lvalues) in enumerate(data.items()):
+
+        xvalues = group_starts + barWidth * j
+
+        # Plot the bars for the given top label across all groups
+        yvalues = [lvalues[group][0] if group in lvalues else 0 for group in allgroups]
+        ax.bar(xvalues, yvalues, color=colors[j], width = barWidth, label=lname)
+
+        # Now plot a line on top of the bar to show the confidence interval
+        for k, group in enumerate(allgroups):
+            ci = lvalues[group][1]
+            ax.plot(xvalues[k]*np.ones(2), ci, 'k')
+
+    ax.set_xticks(group_starts + barWidth * (len(data)-1)/2 , allgroups)
+    if legend == 1 or legend is True:
+        ax.legend()
+        ax.set_ylabel(metric)
+    
+
+    if 'AUC' in metric:
+        ax.set_ylim([0.5,1])
+    ax.set_title(dataset_name)
+
+
+def compute_log_odds(scores):
+    def softmax(x):
+        exp_x = np.exp(x - np.max(x))  
+        return exp_x / exp_x.sum()
+
+    scores_array = np.array(scores)
+
+    if scores_array.ndim == 1:
+        probs = softmax(scores_array)
+    else: 
+        probs = np.apply_along_axis(softmax, axis=1, arr=scores_array)
+
+    log_odds = np.log(probs / (1 - probs))
+    return log_odds.tolist()

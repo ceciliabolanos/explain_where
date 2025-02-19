@@ -186,7 +186,7 @@ def generate_explanation_from_file(filename: str,
        complete_filename = filename
        filename = os.path.basename(filename)
     
-    output_path = Path(path) / filename / model_name / f"ft1_{id_to_explain}_{name}.json"
+    output_path = Path(path) / filename / model_name / f"ft2_{id_to_explain}_{name}.json"
     
     if os.path.exists(output_path):
         return 
