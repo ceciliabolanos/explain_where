@@ -2,7 +2,7 @@ from transformers import AutoFeatureExtractor, ASTForAudioClassification
 import torch
 import soundfile as sf
 from scipy.signal import resample
-from base_model import Model
+from models.base_model import Model
 
 
 class ASTModel(Model):

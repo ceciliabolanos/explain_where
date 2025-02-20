@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import librosa
-from base_model import Model, UpstreamDownstreamModel
+from models.base_model import Model, UpstreamDownstreamModel
 
 PATH_KWS_MODEL = '/home/ec2-user/Models/librispeech-kws-step2200.ckpt'
 

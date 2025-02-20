@@ -1,8 +1,8 @@
 import torch
 import numpy as np
 import librosa
-from base_model import Model, UpstreamDownstreamModel
-from utils import compute_log_odds
+from models.base_model import Model, UpstreamDownstreamModel
+from models.utils import compute_log_odds
 
 PATH_DRUMS_MODEL = '/home/ec2-user/Models/drums-step15000.ckpt'
 
@@ -34,8 +34,8 @@ class DrumsModel(Model):
         
             with torch.no_grad():
                 logits = self.model(inputs)
-            
-            return logits.cpu().tolist()
+            logodds = compute_log_odds(logits.cpu().tolist())
+            return logodds 
         
         return predict_fn
     
@@ -54,7 +54,7 @@ class DrumsModel(Model):
             logits = self.model(inputs)
         
         # For this model, we need to calculate log-odds
-        logodds = compute_log_odds(logits.cpu().tolist()[0])
-        print(logodds)
-        return x, logodds
+        logodds = compute_log_odds(logits.cpu().tolist())
+
+        return x, logodds[0]
     

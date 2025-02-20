@@ -2,7 +2,7 @@ import torch
 import soundfile as sf
 import numpy as np
 from models.base_model import UpstreamDownstreamModel, Model
-from utils import compute_log_odds
+from models.utils import compute_log_odds
 
 PATH_NOCOUGH_MODEL = '/home/ec2-user/Models/iemocap-nocough-1340.ckpt'
 
@@ -34,8 +34,8 @@ class NoCoughModel(Model):
         
             with torch.no_grad():
                 logits = self.model(inputs)
-            
-            return logits.cpu().tolist()
+            logodds = compute_log_odds(logits.cpu().tolist())
+            return logodds
         
         return predict_fn
     
@@ -54,5 +54,6 @@ class NoCoughModel(Model):
             inputs = {k: v.to(self.device) for k, v in xin.items()}
             logits = self.model(inputs)
      
-        logodds = compute_log_odds(logits.cpu().tolist()[0])
-        return x, logodds
+        logodds = compute_log_odds(logits.cpu().tolist())
+
+        return x, logodds[0]
