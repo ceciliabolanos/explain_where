@@ -1,10 +1,11 @@
 from transformers import AutoFeatureExtractor, ASTForAudioClassification
 import torch
-import pandas as pd
 import soundfile as sf
 from scipy.signal import resample
+from base_model import Model
 
-class ASTModel():
+
+class ASTModel(Model):
     def __init__(self, filename, id_to_explain: int):
         self.id_to_explain = id_to_explain
         self.filename = filename
@@ -52,5 +53,4 @@ class ASTModel():
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
             logits = self.model(**inputs).logits
 
-        pred_emotion = logits.cpu().tolist()[0][self.id_to_explain]
         return wav_data, logits.cpu().tolist()[0]
