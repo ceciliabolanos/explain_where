@@ -23,7 +23,8 @@ mask_configs = [
 ]
 
 
-std = calculate_std('audioset')
+# std = calculate_std('audioset')
+std=0.11 # ya lo habiamos calculado antes
 print(std)
 for mask_type in mask_types:
     for window_size in window_sizes: 
