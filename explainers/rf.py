@@ -3,32 +3,27 @@ import json
 from sklearn.ensemble import RandomForestRegressor
 import numpy as np
 import shap 
-from explainers.utils import compute_log_odds
+
 SEED = 42
 
 np.random.seed(SEED)
 random.seed(SEED)
 
 class RFExplainer:
-    def __init__(self, path, filename):
+    def __init__(self, path):
         self.path = path
-        self.filename = filename
    
     def get_feature_importances(self, label_to_explain, method='tree', model='drums'):
         with open(self.path, 'r') as file:
             data = json.load(file)
 
-        if model == 'drums':
-            y = compute_log_odds(data['scores'], label_to_explain)
-            y = y.tolist()
-        else:
-            y = [score[label_to_explain] for score in data['scores']]
+        y = [score[label_to_explain] for score in data['scores']]
 
         distances = data['neighborhood']
 
         RFModel = RandomForestRegressor(n_estimators=100, n_jobs=16)  
         RFModel.fit(data['snrs'], y, sample_weight=distances)
-
+        local_pred = RFModel.predict(data['snrs'][0].reshape(1, -1))[0]
         if method == 'tree':
             importances = RFModel.feature_importances_
         
@@ -42,7 +37,7 @@ class RFExplainer:
             shap_values = explainer.shap_values(choosen_instance)
             importances = shap_values[0]
 
-        return importances
+        return importances, local_pred
     
 
 
