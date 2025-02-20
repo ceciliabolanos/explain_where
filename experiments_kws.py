@@ -16,7 +16,8 @@ mask_percentages = [0.2, 0.4, 0.3]
 window_sizes = [1, 5, 3]
 mask_types = ['zeros', 'noise']
 
-std = calculate_std('kws')
+# std = calculate_std('kws')
+std = 0.06
 print(std)
 
 for mask_type in mask_types:
