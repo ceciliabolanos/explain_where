@@ -39,13 +39,14 @@ class LRExplainer():
         else:
             distances = data['neighborhood']
             weights = np.ones_like(distances)
-    
+
+        model_regressor = None
         if regularization == 'lasso':
-            model_regressor = Lasso(alpha=1e-7, fit_intercept=True, random_state=42)
+            model_regressor = Lasso(alpha=1e-7, fit_intercept=True)
         elif regularization == 'ridge':
-            model_regressor = Ridge(alpha=1e-7, fit_intercept=True, random_state=42)
-        elif regularization == 'noreg':
-            model_regressor = LinearRegression(fit_intercept=True, random_state=42)
+            model_regressor = Ridge(alpha=1e-7, fit_intercept=True)
+        else:
+            model_regressor = LinearRegression(fit_intercept=True)
         
         model_regressor.fit(Xs[:, features], y, sample_weight=weights)
         local_pred = model_regressor.predict(Xs[0, features].reshape(1, -1))
