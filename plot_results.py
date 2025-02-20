@@ -10,8 +10,8 @@ import re, ast
 from IPython import embed
 from utils import barplot_with_ci, read_results_file, mean_with_confint, map_metric_name
 
-metric = 'top5perc'
-outfile = 'top5perc.pdf'
+metric = 'top1perc'
+outfile = 'top1perc.pdf'
 
 metric_fieldname, metric_name_in_tsv, intersection = map_metric_name(metric)
 

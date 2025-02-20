@@ -10,18 +10,19 @@ from data.random_generator import RandomDataGenerator
 
 LABELS_PATH = '/home/ec2-user/explain_where/models/cough/cough_happy.csv'
 SEGMENT_LENGTH = 100
-NUM_SAMPLES = 3000
+NUM_SAMPLES = 400
 
 mask_percentages = [0.2, 0.3, 0.4]
 window_sizes = [5, 1, 3]
-mask_types = ['stat', 'noise', 'zeros']
+mask_types = ['zeros']
 
 df = pd.read_csv(LABELS_PATH)
-log_file_path = '/home/ec2-user/results1/process_log_cough.txt'
-sys.stdout = open(log_file_path, 'w')
 
 print("Starting explanation generation for KWS model.")
-
+mask_configs = [ 
+    {"zeros": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['zeros'], "combinations": 9}},
+    # {"noise": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['noise'], "combinations": 9}}
+]
 for mask_type in mask_types:
     for window_size in window_sizes: 
         for mask_percentage in mask_percentages:
@@ -61,9 +62,25 @@ for mask_type in mask_types:
             print(f"Finished processing for mask_type: {mask_type}, window_size: {window_size}, mask_percentage: {mask_percentage}, j={j}")
 
 print("Explanation generation process completed.")
-
+for i in tqdm(range(len(df))):
+    filename = df.loc[i, 'filename']
+    for config in mask_configs:
+        name=list(config.keys())[0]
+        random_data = RandomDataGenerator(
+            path='/home/ec2-user/results1/explanations_cough', 
+            model_name='cough',
+            filename=filename,
+            config=config,
+            num_samples=3000, 
+        )
+        random_data.process_random_file()
+        generate_explanation_from_file(filename, 
+                    model_name='cough', 
+                    id_to_explain=1,
+                    name=name,
+                    path='/home/ec2-user/results1/explanations_cough')
+        
 # Close the log file when done
-sys.stdout.close()
 
 
 # j =0

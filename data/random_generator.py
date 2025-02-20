@@ -53,7 +53,7 @@ class RandomDataGenerator:
 
         chosen_file = (
                 Path(self.path) / filename / self.model_name /
-                f"scores_p0.4_w3_feuclidean_mzeros.json"
+                f"scores_p0.4_w3_feuclidean_mnoise.json"
             )
         with open(chosen_file, "r") as f:
             data = json.load(f)

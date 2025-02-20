@@ -165,29 +165,38 @@ def get(method: str, mask_percentage, window_size, mask_type, function, base_pat
     pred_df = pd.DataFrame(results)
     pred_df.to_csv(os.path.join(output_dir, f'leo_metric_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_{intersection}.tsv'), sep='\t', index=False)
 
-def get_with_name_audioset(method: str, name, base_path: str, dataset, intersection,id):
+
+def get_with_name_audioset(method: str, name, base_path: str, dataset, intersection, id):
     results = []
     selected_files = pd.read_csv('/home/ec2-user/explain_where/preprocess/files_to_process.csv')
-    
     for i in tqdm(range(len(selected_files))):
         id1 = int(selected_files.loc[i]['event_label'])
         filename = selected_files.loc[i]['filename']
         file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft1_{id}_{name}.json'
-        try:
-            with open(file_path, "r") as file:
-                data = json.load(file)
-        except json.JSONDecodeError as e:
-            print(f"JSON error: {e}. Retrying {file_path}")
+        if os.path.exists(file_path):
+            print(file_path)
+            if id1 == id:
+                try:
+                    with open(file_path, "r") as file:
+                        data = json.load(file)
+                    result = process_audio_file(data, method, intersection)
+                except json.JSONDecodeError as e:
+                        print(f"JSON error: {e}. Skipping {file_path}")
+                        result = None  # Append None in case of JSON error
+                results.append(result)
+           
         
-        result = process_audio_file(data, method, intersection)
-        results.append(result)
-
-    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_music/')
+    if id == 0:
+        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_speech/')
+    if id == 137:
+        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_music/')
+    if id == 74:
+        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_dog/')
     os.makedirs(output_dir, exist_ok=True)
-    
+
+    results = [r for r in results if r is not None]
     pred_df = pd.DataFrame(results)
     pred_df.to_csv(os.path.join(output_dir, f'leo_metric_{method}_{name}_{intersection}.tsv'), sep='\t', index=False)
-
 
 def get_with_name(method: str, name, base_path: str, dataset, intersection):
     results = []
@@ -220,9 +229,17 @@ def main():
                       default='/home/ec2-user/results1',
                       help='Base path for AudioSet experiments')
     args = parser.parse_args()
+    names = ["zeros", "noise"] 
 
     # Select the dataset to run
-
+    for dataset in ['audioset']:    
+        for id in [74]:
+            for name in names:
+                for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+                    if dataset == 'audioset':
+                        get_with_name_audioset(method, name, args.base_path, dataset, 0, id)
+                    else:    
+                        get_with_name(method, name, args.base_path, dataset, 0)
     # names = ["zeros", "noise", "stat", "all"] 
 
     # for function in ['euclidean']:
@@ -243,11 +260,11 @@ def main():
     #             for window_size in [1, 3, 5]:
     #                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
     #                     get(method, mask_percentage, window_size, mask_type, function, args.base_path, dataset, 0)
-    names = ["zeros", "noise"] 
+    # names = ["zeros", "noise"] 
 
-    for name in names:
-        for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-            get_with_name(method, name, args.base_path, 'kws', 0)
+    # for name in names:
+    #     for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #         get_with_name(method, name, args.base_path, 'kws', 0)
   
     # names = ["0.2-1", "0.2-3", "0.2-5",
     #         "0.3-1", "0.3-3", "0.3-5",

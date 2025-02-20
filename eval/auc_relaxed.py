@@ -181,7 +181,7 @@ def get_with_name_audioset(method: str, name, base_path: str, dataset, intersect
     for i in tqdm(range(len(selected_files))):
         id1 = int(selected_files.loc[i]['event_label'])
         filename = selected_files.loc[i]['filename']
-        file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft1_{id}_{name}.json'
+        file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft2_{id}_{name}.json'
         if os.path.exists(file_path):
             print(file_path)
             if id1 == id:
@@ -212,7 +212,7 @@ def get_with_name(method: str, name, base_path: str, dataset, intersection):
     results = []
     
     for root, _, files in tqdm(os.walk(os.path.join(base_path, f'explanations_{dataset}'))):
-        pattern = re.compile(rf'ft1_.*_{name}\.json$')
+        pattern = re.compile(rf'ft2_.*_{name}\.json$')
         json_files = [f for f in files if pattern.match(f)]
         
         for json_file in json_files:
@@ -247,19 +247,19 @@ def main():
     # # Select dataset to run
     
     # for dataset in ['audioset', 'cough', 'kws', 'drums']:
-    for dataset in ['audioset']:    
-        for id in [0, 137, 74]:
+    for dataset in ['cough']:    
+        # for id in [0]:
             for name in names:
                 for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                    if dataset == 'audioset':
+                    if dataset == 'audioset1':
                         get_with_name_audioset(method, name, args.base_path, dataset, 0.09, id)
                     else:    
                         get_with_name(method, name, args.base_path, dataset, 0.09)
 
-    for dataset in ['kws']:    
-            for name in names:
-                for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                    get_with_name(method, name, args.base_path, dataset, 0.09)
+    # for dataset in ['kws']:    
+    #         for name in names:
+    #             for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
+    #                 get_with_name(method, name, args.base_path, dataset, 0.09)
     # for function in ['euclidean']:
     #     for mask_type in ['zeros', 'stat', 'noise']:
     #         for mask_percentage in [0.2, 0.3, 0.4]:

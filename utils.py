@@ -328,15 +328,6 @@ def create_waveform_video_with_importances(waveform, processed_scores, output_fi
 
 
 def create_visualization(waveform, json_file, output_file, markers=None):
-    """
-    Create a complete visualization from audio and JSON files
-    
-    Args:
-        audio_file: path to the audio file
-        json_file: path to the JSON file with importance scores
-        output_file: path for the output video
-        markers: optional list of time markers
-    """
     processed_data = read_and_process_importance_scores(json_file)
 
     create_waveform_video_with_importances(
