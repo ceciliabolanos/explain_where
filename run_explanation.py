@@ -1,13 +1,9 @@
-from explainers.random_forest import RFExplainer
-from explainers.linear_regression import LRExplainer
-from explainers.linear_regression_noconstrain import LRnoconExplainer
-from explainers.utils import compute_log_odds
+from explainers.shap import SHAPExplainer
+from explainers.lr import LRExplainer
+from explainers.rf import RFExplainer
 
-from explainers.kernel_shap import KernelShapExplainer
-from explainers.kernel_shap_1constrain import KernelShapExplainer1constraint
-
-from data.mask_windows import WindowMaskingDataGenerator
-from data.base_generator import MaskingConfig
+from data_generator.mask_windows import WindowMaskingDataGenerator
+from data_generator.base_generator import MaskingConfig
 
 from models.ast.model import ASTModel
 from models.cough.model import CoughModel
@@ -24,6 +20,7 @@ def generate_explanation(filename: str,
                   model_name: str, 
                   id_to_explain: int,
                   config: MaskingConfig, 
+                  std_dataset: float,
                   path: str):
     
     if model_name == 'ast':
@@ -50,10 +47,7 @@ def generate_explanation(filename: str,
     predict_fn = model.get_predict_fn()   
 
     pred_zeros = predict_fn([np.zeros(len(input))])
-    if model_name == 'drums':
-        empty_score = compute_log_odds(pred_zeros, id_to_explain)[0]
-    else:
-        empty_score = pred_zeros[0][id_to_explain]
+    empty_score = pred_zeros[0][id_to_explain]
 
     ############## Generate data ##############
     data_generator = WindowMaskingDataGenerator(
@@ -64,99 +58,70 @@ def generate_explanation(filename: str,
             predict_fn=predict_fn,
             filename=filename,
             id_to_explain=id_to_explain, 
+            std_dataset=std_dataset, 
             path=path
         )
-
-    # data_generator.mode = 'naive_masked'
-    # if not os.path.exists(Path(path) / filename / model_name / f"scores_w1_m{config.mask_type}.json"):
-    #     data_generator.generate(filename)
 
     data_generator.mode = 'all_masked'
     if not os.path.exists(Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"):
         data_generator.generate(filename)
 
     ######### Generate the importances for each method ##########
-    # output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"
+    output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"
 
-    # if os.path.exists(output_path):
-    #     return 
+    if os.path.exists(output_path):
+        return 
 
-    # kernelshap_analyzer = KernelShapExplainer(
-    #     path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
-    # )
-    # importances_kernelshap = kernelshap_analyzer.explain_instance(
-    #     label_to_explain=id_to_explain, empty_score=empty_score, model=model_name).get_feature_importances()
+    kernelshap_analyzer = SHAPExplainer(
+        path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
+    )
+    importances_kernelshap, local_pred = kernelshap_analyzer.get_feature_importances(label_to_explain=id_to_explain)
 
-    # kernelshap_analyzer_1constraint = KernelShapExplainer1constraint(
-    #     path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
-    # )
-    # importances_kernelshap_analyzer_1constraint = kernelshap_analyzer_1constraint.explain_instance(
-    #     label_to_explain=id_to_explain, empty_score=empty_score, model=model_name).get_feature_importances()
-
-    # rf_analyzer = RFExplainer(
-    #     path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
-    #     filename=filename,
-    # )
-    # importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree', model=model_name)
-
-    # # LR analysis
-    # lime_nocon_analyzer = LRnoconExplainer(
-    #     Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
-    #     verbose=False,
-    #     absolute_feature_sort=False
-    # )
-    # importances_nocon = lime_nocon_analyzer.explain_instance(
-    #     label_to_explain=id_to_explain, model=model_name).get_feature_importances()
+    rf_analyzer = RFExplainer(
+        path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json")
     
-    # lime_analyzer = LRExplainer(
-    #     Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
-    #     verbose=False,
-    #     absolute_feature_sort=False
-    # )
-    # importances_lime = lime_analyzer.explain_instance(
-    #     label_to_explain=id_to_explain, model=model_name).get_feature_importances()
+    importances_rf_tree, local_pred = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
+
+    # LR analysis
+    lr_analyzer = LRExplainer(
+        Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json")
     
-    # true_markers = get_segments(complete_filename, id_to_explain, model_name)
-    # ############## Prepare output ##############
-    # output_data = {
-    #     "metadata": {
-    #         "filename": filename,
-    #         "id_explained": float(id_to_explain),
-    #         "widow_size": config.window_size,
-    #         "num_samples": config.num_samples,
-    #         "mask_percentages": config.mask_percentage,
-    #         "segment_length": config.segment_length,
-    #         "true_markers": true_markers,
-    #         "true_score": real_score_id
-    #     },
-    #     "importance_scores": {
-    #         "importances_kernelshap_analyzer_1constraint": {
-    #             "method": "NaiveAudioAnalyzer",
-    #             "values": importances_kernelshap_analyzer_1constraint.tolist() if hasattr(importances_kernelshap_analyzer_1constraint, 'tolist') else importances_kernelshap_analyzer_1constraint
-    #         },
-    #         "random_forest_tree_importance": {
-    #                 "method": "masked rf with tree importance",
-    #                 "values": importances_rf_tree.tolist() if hasattr(importances_rf_tree, 'tolist') else importances_rf_tree
-    #         },
-    #         "linear_regression": {
-    #             "method": "Linear Regression with kernel as pi",
-    #             "values": importances_lime.tolist() if hasattr(importances_lime, 'tolist') else importances_lime
-    #         },
-    #         "linear_regression_nocon": {
-    #             "method": "Linear Regression with kernel as pi",
-    #             "values": importances_nocon.tolist() if hasattr(importances_nocon, 'tolist') else importances_nocon
-    #         },
-    #         "kernel_shap": {
-    #             "method": "Linear Regression with shap as pi",
-    #             "values": importances_kernelshap.tolist() if hasattr(importances_kernelshap, 'tolist') else importances_kernelshap  
-    #         }
-    #     }
-    # }
+    importances_lr, local_pred  = lr_analyzer.get_feature_importances(label_to_explain=id_to_explain)
+    
+    true_markers = get_segments(complete_filename, id_to_explain, model_name)
    
-    # with open(output_path, 'w') as f:
-    #     json.dump(output_data, f, indent=2)
+    ############## Prepare output ##############
+    output_data = {
+        "metadata": {
+            "filename": filename,
+            "id_explained": float(id_to_explain),
+            "widow_size": config.window_size,
+            "num_samples": config.num_samples,
+            "mask_percentages": config.mask_percentage,
+            "segment_length": config.segment_length,
+            "true_markers": true_markers,
+            "true_score": real_score_id
+        },
+        "importance_scores": {
+            "SHAP": {
+                "method": "NaiveAudioAnalyzer",
+                "values": importances_kernelshap.tolist() if hasattr(importances_kernelshap, 'tolist') else importances_kernelshap
+            },
+            "RF": {
+                    "method": "masked rf with tree importance",
+                    "values": importances_rf_tree.tolist() if hasattr(importances_rf_tree, 'tolist') else importances_rf_tree
+            },
+            "LR": {
+                "method": "Linear Regression with kernel as pi",
+                "values": importances_lr.tolist() if hasattr(importances_lr, 'tolist') else importances_lr
+            }
+        }
+    }
+   
+    with open(output_path, 'w') as f:
+        json.dump(output_data, f, indent=2)
 
-    # print(f"Importance scores saved to: {output_path}")
+    print(f"Importance scores saved to: {output_path}")
 
     return 
 
@@ -186,7 +151,7 @@ def generate_explanation_from_file(filename: str,
        complete_filename = filename
        filename = os.path.basename(filename)
     
-    output_path = Path(path) / filename / model_name / f"ft2_{id_to_explain}_{name}.json"
+    output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_{name}.json"
     
     if os.path.exists(output_path):
         return 
@@ -196,48 +161,23 @@ def generate_explanation_from_file(filename: str,
     predict_fn = model.get_predict_fn()   
 
     pred_zeros = predict_fn([np.zeros(len(input))])
-
-    if model_name == 'drums':
-        empty_score = compute_log_odds(pred_zeros, id_to_explain)[0]
-    elif model_name == 'kws':
-        empty_score = pred_zeros[id_to_explain]
-    else:
-        empty_score = pred_zeros[0][id_to_explain]
+    empty_score = pred_zeros[0][id_to_explain]
         
-    kernelshap_analyzer = KernelShapExplainer(
-        path= Path(path) / filename / model_name / f"scores_{name}.json",
-    )
-    importances_kernelshap = kernelshap_analyzer.explain_instance(
-        label_to_explain=id_to_explain, empty_score=empty_score, model=model_name).get_feature_importances()
 
-    kernelshap_analyzer_1constraint = KernelShapExplainer1constraint(
+    kernelshap = SHAPExplainer(
         path= Path(path) / filename / model_name / f"scores_{name}.json",
     )
-    importances_kernelshap_analyzer_1constraint = kernelshap_analyzer_1constraint.explain_instance(
-        label_to_explain=id_to_explain, empty_score=empty_score, model=model_name).get_feature_importances()
+    importances_kernelshap, local_pred = kernelshap.get_feature_importances(label_to_explain=id_to_explain)
 
     rf_analyzer = RFExplainer(
-        path= Path(path) / filename / model_name / f"scores_{name}.json",
-        filename=filename,
-    )
-    importances_rf_tree = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree', model=model_name)
+        path= Path(path) / filename / model_name / f"scores_{name}.json")
 
-    # LR analysis
-    lime_nocon_analyzer = LRnoconExplainer(
-        Path(path) / filename / model_name / f"scores_{name}.json",
-        verbose=False,
-        absolute_feature_sort=False
-    )
-    importances_nocon = lime_nocon_analyzer.explain_instance(
-        label_to_explain=id_to_explain, model=model_name).get_feature_importances()
-    
+    importances_rf_tree, local_pred = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
+
     lime_analyzer = LRExplainer(
-        Path(path) / filename / model_name / f"scores_{name}.json",
-        verbose=False,
-        absolute_feature_sort=False
-    )
-    importances_lime = lime_analyzer.explain_instance(
-        label_to_explain=id_to_explain, model=model_name).get_feature_importances()
+        Path(path) / filename / model_name / f"scores_{name}.json")
+    
+    importances_lr, local_pred = lime_analyzer.get_feature_importances(label_to_explain=id_to_explain)
     
     true_markers = get_segments(complete_filename, id_to_explain, model_name)
     ############## Prepare output ##############
@@ -250,31 +190,22 @@ def generate_explanation_from_file(filename: str,
             "true_score": real_score_id
         },
         "importance_scores": {
-            "importances_kernelshap_analyzer_1constraint": {
-                "method": "NaiveAudioAnalyzer",
-                "values": importances_kernelshap_analyzer_1constraint.tolist() if hasattr(importances_kernelshap_analyzer_1constraint, 'tolist') else importances_kernelshap_analyzer_1constraint
+            "SHAP": {
+                "method": "Shap",
+                "values": importances_kernelshap.tolist() if hasattr(importances_kernelshap, 'tolist') else importances_kernelshap
             },
-            "random_forest_tree_importance": {
+            "RF": {
                     "method": "masked rf with tree importance",
                     "values": importances_rf_tree.tolist() if hasattr(importances_rf_tree, 'tolist') else importances_rf_tree
             },
-            "linear_regression": {
+            "LR": {
                 "method": "Linear Regression with kernel as pi",
-                "values": importances_lime.tolist() if hasattr(importances_lime, 'tolist') else importances_lime
-            },
-            "linear_regression_nocon": {
-                "method": "Linear Regression with kernel as pi",
-                "values": importances_nocon.tolist() if hasattr(importances_nocon, 'tolist') else importances_nocon
-            },
-            "kernel_shap": {
-                "method": "Linear Regression with shap as pi",
-                "values": importances_kernelshap.tolist() if hasattr(importances_kernelshap, 'tolist') else importances_kernelshap  
+                "values": importances_lr.tolist() if hasattr(importances_lr, 'tolist') else importances_lr
             }
+           
         }
     }
 
-    # Save results
-   
     with open(output_path, 'w') as f:
         json.dump(output_data, f, indent=2)
 
