@@ -35,7 +35,7 @@ class DrumsModel(Model):
             with torch.no_grad():
                 logits = self.model(inputs)
             logodds = compute_log_odds(logits.cpu().tolist())
-            return logodds 
+            return logodds.tolist()
         
         return predict_fn
     

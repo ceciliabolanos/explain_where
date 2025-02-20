@@ -59,9 +59,9 @@ class SHAPExplainer():
         y = np.array(y)
 
         Xs = np.array(data['snrs'])
-        X = Xs[1:, features]
         features = range(Xs.shape[1])
-
+        X = Xs[1:, features]
+        
         if weighting:
             distances = data['snrs']
             weights = self.pi_x_for_list(distances[1:]) # dont use the first instance because its the original one    

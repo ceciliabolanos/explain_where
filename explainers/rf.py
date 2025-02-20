@@ -13,7 +13,7 @@ class RFExplainer:
     def __init__(self, path):
         self.path = path
    
-    def get_feature_importances(self, label_to_explain, method='tree', model='drums'):
+    def get_feature_importances(self, label_to_explain, method='tree'):
         with open(self.path, 'r') as file:
             data = json.load(file)
 
@@ -23,7 +23,7 @@ class RFExplainer:
 
         RFModel = RandomForestRegressor(n_estimators=100, n_jobs=16)  
         RFModel.fit(data['snrs'], y, sample_weight=distances)
-        local_pred = RFModel.predict(data['snrs'][0].reshape(1, -1))[0]
+        local_pred = 0
         if method == 'tree':
             importances = RFModel.feature_importances_
         
