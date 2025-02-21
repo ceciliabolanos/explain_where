@@ -51,29 +51,29 @@ for mask_type in mask_types:
                 j = j + 1
 
 
-# mask_configs = [ 
-#     {"zeros": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['zeros'], "combinations": 9}},
-#     {"noise": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['noise'], "combinations": 9}}
-# ]
+mask_configs = [ 
+    {"zeros": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['zeros'], "combinations": 9}},
+    {"noise": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['noise'], "combinations": 9}}
+]
 
-# j=0
-# for i in tqdm(range(len(df))):
-#     filename = df.loc[i, 'filename']
-#     for config in mask_configs:
-#         name=list(config.keys())[0]
-#         if j < 50:
-#             random_data = RandomDataGenerator(
-#                 path='/home/ec2-user/results/explanations_cough', 
-#                 model_name='cough',
-#                 filename=filename,
-#                 config=config,
-#                 num_samples=3000, 
-#             )
-#             random_data.process_random_file()
-#             generate_explanation_from_file(filename, 
-#                         model_name='cough', 
-#                         id_to_explain=1,
-#                         name=name,
-#                         path='/home/ec2-user/results/explanations_cough')
-#     j=j+1
+j=0
+for i in tqdm(range(len(df))):
+    filename = df.loc[i, 'filename']
+    for config in mask_configs:
+        name=list(config.keys())[0]
+        if j < 50:
+            random_data = RandomDataGenerator(
+                path='/home/ec2-user/results/explanations_cough', 
+                model_name='cough',
+                filename=filename,
+                config=config,
+                num_samples=3000, 
+            )
+            random_data.process_random_file()
+            generate_explanation_from_file(filename, 
+                        model_name='cough', 
+                        id_to_explain=1,
+                        name=name,
+                        path='/home/ec2-user/results/explanations_cough')
+    j=j+1
             
