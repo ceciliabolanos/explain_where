@@ -10,8 +10,8 @@ import re, ast
 from IPython import embed
 from utils import barplot_with_ci, read_results_file, mean_with_confint, map_metric_name
 
-metric = 'top1perc'
-outfile = 'top1perc.pdf'
+metric = 'top50perc'
+outfile = 'top50perc.pdf'
 
 metric_fieldname, metric_name_in_tsv, intersection = map_metric_name(metric)
 
@@ -19,14 +19,16 @@ metric_fieldname, metric_name_in_tsv, intersection = map_metric_name(metric)
 dataset_dict = {'drums': 'Drums', 'kws': 'KWS', 'audioset': 'Audioset', 'audioset_speech': 'Speech', 'audioset_dog': 'Dog', 'audioset_music': 'Music'}
 metric_dict = {'auc': 'Average AUC', 'auc_relaxed': 'Average AUC', 'leo_metric': 'LM'}
 names_dict = OrderedDict([('noise','noise'), ('zeros','zero')]) #, ('stat', 'mean'), ('all', 'mix')])
-methods_dict = OrderedDict([('tree_importance', 'RF'), ('linear_regression_noreg_noweights','LR'), ('kernel_shap_sumcons','SHAP')])
+methods_dict = OrderedDict([('RF', 'RF'), ('LR','LR'), ('SHAP','SHAP')])
 
 methods = list(methods_dict.keys())
 names   = list(names_dict.keys())
 
-datasets = ['drums', 'kws', 'audioset_music', 'audioset_speech', 'audioset_dog']
+# datasets = ['drums', 'kws', 'audioset_music', 'audioset_speech', 'audioset_dog']
+datasets = ['drums']
 
 fig, axs = plt.subplots(1, len(datasets), figsize=(7,3), sharey=True)
+axs = np.atleast_1d(axs)  # Convert to array if it's not
 
 for dataseti, dataset in enumerate(datasets):
 
