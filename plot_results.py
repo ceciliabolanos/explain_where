@@ -10,8 +10,8 @@ import re, ast
 from IPython import embed
 from utils import barplot_with_ci, read_results_file, mean_with_confint, map_metric_name
 
-metric = 'top50'
-outfile = 'top50.png'
+metric = 'auc_relaxed'
+outfile = 'auc.png'
 
 metric_fieldname, metric_name_in_tsv, intersection = map_metric_name(metric)
 
@@ -25,7 +25,7 @@ methods = list(methods_dict.keys())
 names   = list(names_dict.keys())
 
 # datasets = ['drums', 'kws', 'audioset_music', 'audioset_speech', 'audioset_dog']
-datasets = ['kws']
+datasets = ['drums']
 
 fig, axs = plt.subplots(1, len(datasets), figsize=(7,3), sharey=True)
 axs = np.atleast_1d(axs)  # Convert to array if it's not

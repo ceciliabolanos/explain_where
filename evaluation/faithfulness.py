@@ -1,6 +1,5 @@
 import json
 from tqdm import tqdm
-from utils import process_importance_values
 import os
 import pandas as pd
 import argparse
@@ -58,7 +57,6 @@ def process_audio_file(data, dataset, method, masking_type):
     id_explained = int(data['metadata']['id_explained'])
     segment_length = data["metadata"]['segment_length']
     overlap = 0 
-    granularidad_ms = segment_length - overlap
 
     if dataset == 'audioset':
        model = ASTModel(filename, id_explained) 
@@ -76,25 +74,12 @@ def process_audio_file(data, dataset, method, masking_type):
     predict_fn = model.get_predict_fn()   
 
     # Get importance scores
-    if method == 'tree_importance':
-        values = data['importance_scores']['random_forest_tree_importance']['values']
-    elif method == 'linear_regression':
-        values = data['importance_scores']['linear_regression']['values']['coefficients']
-    elif method == 'kernel_shap':
-        values = data['importance_scores']['kernel_shap']['values']['coefficients']
-    elif method == 'linear_regression_noreg_noweights':
-        values = data['importance_scores']['linear_regression_nocon']['values']['coefficients']
-    elif method == 'kernel_shap_sumcons':
-        values = data['importance_scores']['importances_kernelshap_analyzer_1constraint']['values']['coefficients']
-    
-    importance_values, times = process_importance_values(values, segment_size=segment_length, step_size=granularidad_ms)
-
-    # Process importance scores
-    importance_time_pairs = list(zip(importance_values, times))
-
-    sorted_pairs_descending = sorted(importance_time_pairs, key=lambda x: x[0], reverse=True)
-
-    sorted_importances_d, sorted_times_d = zip(*sorted_pairs_descending)
+    if method == 'RF':
+        values = data['importance_scores']['RF']['values']
+    elif method == 'SHAP':
+        values = data['importance_scores']['SHAP']['values']
+    elif method == 'LR':
+        values = data['importance_scores']['LR']['values']
 
     # Calculate scores
     audio_baseline = get_audio_base(wav_data, masking_type, segment_length)
@@ -104,37 +89,28 @@ def process_audio_file(data, dataset, method, masking_type):
     
     score_curves = {
         'score_curve_sacando_topk': [], # Delete higher importance values
-        'score_curve_consolo_topk': [], # Only have higher importance values
     }
     
-    # Process in batches
-    batch_size = 100
     list_audio_sacando_topk = []
     list_solo_topk = []
-
-    for i in range(0, len(sorted_importances_d), batch_size):
-        batch_times_d = sorted_times_d[i:i+batch_size]
-        
-        # Descending modification with the higher importance values
-        start_idx_d = int(batch_times_d[0] * 16000)
-        end_idx_d = int(batch_times_d[-1] * 16000)
+    sorted_indices = sorted(range(len(values)), key=lambda k: values[k], reverse=True)
+    L = int((segment_length / 1000) * 16000)   
+    O = int((overlap / 1000) * 16000)
+    
+    step = L - O
+    for i in sorted_indices:
+        start_idx_d = i * step
+        end_idx_d = start_idx_d + step
         audio_sacando_topk[start_idx_d:end_idx_d] = audio_baseline[start_idx_d:end_idx_d]
-        # audio_solo_topk[start_idx_d:end_idx_d] = wav_data[start_idx_d:end_idx_d]
 
         list_audio_sacando_topk.append(audio_sacando_topk.copy())
         list_solo_topk.append(audio_solo_topk.copy())
         
         # Process in larger chunks (50 at a time)
-        if len(list_audio_sacando_topk) >= 32 or i + batch_size >= len(sorted_importances_d):
+        if len(list_audio_sacando_topk) >= 32 or i + 1 >= len(sorted_indices):
             results_descending = predict_fn(list_audio_sacando_topk)
-            # results_ascending = predict_fn(list_solo_topk)
-
             score_curves['score_curve_sacando_topk'].extend(results_descending)
-            # score_curves['score_curve_consolo_topk'].extend(results_ascending)
-
-            # Free up memory
             list_audio_sacando_topk.clear()
-            # list_solo_topk.clear()
 
     return {
         'filename': filename,
@@ -172,7 +148,7 @@ def get(method, mask_percentage, window_size, mask_type, function, base_path, da
 
 def get_audioset(method: str, mask_percentage, window_size, mask_type, function, base_path: str, dataset):
     results = []
-    selected_files = pd.read_csv('/home/ec2-user/explain_where/preprocess/files_to_process.csv')
+    selected_files = pd.read_csv('/home/ec2-user/explain_where/datasets/audioset/audioset.csv')
     for i in tqdm(range(len(selected_files))):
         id = int(selected_files.loc[i]['event_label'])
         filename = selected_files.loc[i]['filename']
@@ -195,11 +171,11 @@ def get_audioset(method: str, mask_percentage, window_size, mask_type, function,
 
 def get_with_name_audioset(method: str, name, base_path: str, dataset, mask_type, id):
     results = []
-    selected_files = pd.read_csv('/home/ec2-user/explain_where/preprocess/files_to_process.csv')
+    selected_files = pd.read_csv('/home/ec2-user/explain_where/datasets/audioset/audioset.csv')
     for i in tqdm(range(len(selected_files))):
         id1 = int(selected_files.loc[i]['event_label'])
         filename = selected_files.loc[i]['filename']
-        file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft1_{id}_{name}.json'
+        file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft_{id}_{name}.json'
         if os.path.exists(file_path):
             if id1 == id:
                 try:
@@ -228,7 +204,7 @@ def get_with_name(method: str, name, base_path: str, dataset, mask_type):
     results = []
     
     for root, _, files in tqdm(os.walk(os.path.join(base_path, f'explanations_{dataset}'))):
-        pattern = re.compile(rf'ft1_.*_{name}\.json$')
+        pattern = re.compile(rf'ft_.*_{name}\.json$')
         json_files = [f for f in files if pattern.match(f)]
         
         for json_file in json_files:
@@ -253,19 +229,23 @@ def get_with_name(method: str, name, base_path: str, dataset, mask_type):
 def main():
     parser = argparse.ArgumentParser(description='Process AudioSet data and generate evaluation files.')
     parser.add_argument('--base_path', type=str,
-                      default='/home/ec2-user/results1',
+                      default='/home/ec2-user/results',
                       help='Base path for AudioSet experiments')
     args = parser.parse_args()
 
 
-    for dataset in ['audioset']:
-        for id in [0, 74, 137]:
-            for name in ['noise', 'zeros']:
-                for method in ['tree_importance', 'linear_regression_noreg_noweights', 'kernel_shap_sumcons']:
-                    if dataset == 'audioset':
-                        get_with_name_audioset(method, name, args.base_path, dataset, name, id)
-                    else:    
-                        get_with_name(method, name, args.base_path, dataset, name)
+    # for dataset in ['audioset']:
+    #     for id in [0, 74, 137]:
+    #         for name in ['noise', 'zeros']:
+    #             for method in ['RF', 'LR', 'SHAP']:
+    #                 get_with_name_audioset(method, name, args.base_path, dataset, name, id)
+    # , 'cough', 'kws'
+    datasets = ['kws']
+    for dataset in datasets:
+        for name in ['noise', 'zeros']:
+            for method in ['RF', 'LR', 'SHAP']:
+                get_with_name(method, name, args.base_path, dataset, name)
+                 
 
    
 if __name__ == '__main__':

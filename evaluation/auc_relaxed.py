@@ -175,10 +175,7 @@ def get_audioset(method: str, mask_percentage, window_size, mask_type, function,
         output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_dog/')
     os.makedirs(output_dir, exist_ok=True)
 
-    results = [r for r in results if r is not None]
-    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
-    os.makedirs(output_dir, exist_ok=True)
-    
+    results = [r for r in results if r is not None]    
     pred_df = pd.DataFrame(results)
     pred_df.to_csv(os.path.join(output_dir, f'auc_relaxed_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_{intersection}.tsv'), sep='\t', index=False)
 
@@ -230,7 +227,8 @@ def get_with_name(method: str, name, base_path: str, dataset, intersection):
             except json.JSONDecodeError as e:
                     print(f"JSON error: {e}. Skipping {file_path}")
                     result = None  # Append None in case of JSON error
-            results.append(result)       
+            results.append(result)
+       
         
     output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
     os.makedirs(output_dir, exist_ok=True)
@@ -247,17 +245,25 @@ def main():
 
     names = ["zeros", "noise"]
 
-    
-    for dataset in ['cough', 'kws', 'drums']:    
-        for name in names:
-            for method in ['SHAP', 'LR', 'RF']:        
-                get_with_name(method, name, args.base_path, dataset, 0.09)
+    # # datasets = ['cough', 'drums', 'kws']
+    # datasets =  ['drums']
+    # for dataset in datasets:    
+    #     for name in names:
+    #         for method in ['SHAP', 'LR', 'RF']:        
+    #             get_with_name(method, name, args.base_path, dataset, 0.09)
+                
+    # for dataset in datasets:
+    #     for mask_type in ['zeros', 'noise']:
+    #         for mask_percentage in [0.2, 0.3, 0.4]:
+    #             for window_size in [1, 3, 5]:
+    #                 for method in ['SHAP', 'LR', 'RF']:
+    #                     get(method, mask_percentage, window_size, mask_type, 'euclidean', args.base_path, dataset, 0.09)
 
-    for dataset in ['audioset']:    
-        for id in [0, 137, 74]:
-            for name in names:
-                for method in ['SHAP', 'LR', 'RF']:
-                    get_with_name_audioset(method, name, args.base_path, dataset, 0.09, id)
+    # for dataset in ['audioset']:    
+    #     for id in [0, 137, 74]:
+    #         for name in names:
+    #             for method in ['SHAP', 'LR', 'RF']:
+    #                 get_with_name_audioset(method, name, args.base_path, dataset, 0.09, id)
                     
 
     for id in [0, 137, 74]:
@@ -267,13 +273,7 @@ def main():
                     for method in ['SHAP', 'LR', 'RF']:
                         get_audioset(method, mask_percentage, window_size, mask_type, 'euclidean', args.base_path, 'audioset', 0.09, id)
     
-    for dataset in ['cough', 'kws', 'drums']:
-        for mask_type in ['zeros', 'noise']:
-            for mask_percentage in [0.2, 0.3, 0.4]:
-                for window_size in [1, 3, 5]:
-                    for method in ['SHAP', 'LR', 'RF']:
-                        get(method, mask_percentage, window_size, mask_type, 'euclidean', args.base_path, dataset, 0.09)
-
+    
 if __name__ == '__main__':
     main()
 
