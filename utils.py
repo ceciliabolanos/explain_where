@@ -209,10 +209,10 @@ def create_waveform_video_with_importances(waveform, processed_scores, output_fi
         
         # Calculate number of importance plots needed
         n_importance_plots = sum([
-            1,  # tree (masked, random forest)
-            1,  # shap (masked, random forest)
-            1,  # linear regression (masked, noise)
-            1  # kernel shap (masked, noise)
+            1, 
+            1,
+            1, 
+            1 
         ])
         
         # Create figure and axes
@@ -336,7 +336,7 @@ def create_visualization(waveform, json_file, output_file):
     )
 
 import pandas as pd
-from confidence_intervals import evaluate_with_conf_int
+# from confidence_intervals import evaluate_with_conf_int
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
