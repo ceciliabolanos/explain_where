@@ -336,7 +336,7 @@ def create_visualization(waveform, json_file, output_file):
     )
 
 import pandas as pd
-# from confidence_intervals import evaluate_with_conf_int
+from confidence_intervals import evaluate_with_conf_int
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -383,10 +383,10 @@ def read_results_file(file_path, metric=None, method=None, name=None, dataset=No
         df_combination['name'] = name
         df_combination[metric] = 0
 
-        if 'top' in metric and dataset == 'audioset':
+        if 'top' in metric and dataset != 'drums':
             df_combination['log_odds_curve'] = df_combination['score_curve_sacando_topk'].apply(ast.literal_eval)
             df_combination['event_label'] = df_combination['event_label'].apply(int)
-            df_combination['log_odds'] = df_combination['actual_score'].apply(clean_and_eval)
+            df_combination['log_odds'] = df_combination['actual_score'].apply(ast.literal_eval)
             
             # Loop through the rows of df 
             for index, row in df_combination.iterrows():
@@ -401,7 +401,7 @@ def read_results_file(file_path, metric=None, method=None, name=None, dataset=No
                 if 'rel' in metric:
                     df_combination.at[index,metric] /= row['log_odds'][row['event_label']]
 
-        if 'top' in metric and dataset != 'audioset':
+        if 'top' in metric and dataset == 'drums':
             df_combination['log_odds_curve'] = df_combination['score_curve_sacando_topk'].apply(ast.literal_eval)
             df_combination['event_label'] = df_combination['event_label'].apply(int)
             df_combination['log_odds'] = df_combination['actual_score'].apply(clean_and_eval)
