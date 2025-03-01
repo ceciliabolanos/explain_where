@@ -7,6 +7,7 @@ from data_generator.base_generator import MaskingConfig
 
 from models.ast.model import ASTModel
 from models.cough.model import CoughModel
+from models.nocough.model import NoCoughModel
 from models.drums.model import DrumsModel
 from models.kws.model import KWSModel
 
@@ -29,6 +30,11 @@ def generate_explanation(filename: str,
 
     if model_name == 'cough':
        model = CoughModel(filename, id_to_explain) 
+       complete_filename = filename
+       filename = os.path.basename(filename)
+       
+    if model_name == 'nocough':
+       model = NoCoughModel(filename, id_to_explain) 
        complete_filename = filename
        filename = os.path.basename(filename)
 
@@ -138,6 +144,11 @@ def generate_explanation_from_file(filename: str,
 
     if model_name == 'cough':
        model = CoughModel(filename, id_to_explain) 
+       complete_filename = filename
+       filename = os.path.basename(filename)
+       
+    if model_name == 'nocough':
+       model = NoCoughModel(filename, id_to_explain) 
        complete_filename = filename
        filename = os.path.basename(filename)
 

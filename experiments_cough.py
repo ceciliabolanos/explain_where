@@ -21,34 +21,34 @@ df = pd.read_csv(LABELS_PATH)
 std = 0.135
 print(std)
 
-for mask_type in mask_types:
-    for window_size in window_sizes: 
-        for mask_percentage in mask_percentages:
-            mask_config = MaskingConfig(segment_length=SEGMENT_LENGTH, 
-                                        mask_percentage=mask_percentage, 
-                                        window_size=window_size,
-                                        num_samples=NUM_SAMPLES, 
-                                        function='euclidean',
-                                        mask_type=mask_type)
-            j = 0   
-            for i in tqdm(range(len(df))):
-                filename = df.loc[i, 'filename']
-                if j < 50:
-                    try:
-                        generate_explanation(
-                            filename=filename,
-                            model_name='cough',
-                            id_to_explain=1,
-                            config=mask_config,
-                            std_dataset=std,
-                            path='/home/ec2-user/results/explanations_cough'
-                        )
-                    except Exception as e:
-                        print(f"Error generating explanation for {filename}: {e}")
+# for mask_type in mask_types:
+#     for window_size in window_sizes: 
+#         for mask_percentage in mask_percentages:
+#             mask_config = MaskingConfig(segment_length=SEGMENT_LENGTH, 
+#                                         mask_percentage=mask_percentage, 
+#                                         window_size=window_size,
+#                                         num_samples=NUM_SAMPLES, 
+#                                         function='euclidean',
+#                                         mask_type=mask_type)
+#             j = 0   
+#             for i in tqdm(range(len(df))):
+#                 filename = df.loc[i, 'filename']
+#                 if j < 50:
+#                     try:
+#                         generate_explanation(
+#                             filename=filename,
+#                             model_name='nocough',
+#                             id_to_explain=1,
+#                             config=mask_config,
+#                             std_dataset=std,
+#                             path='/home/ec2-user/results/explanations_nocough'
+#                         )
+#                     except Exception as e:
+#                         print(f"Error generating explanation for {filename}: {e}")
             
-                torch.cuda.empty_cache()
-                del filename
-                j = j + 1
+#                 torch.cuda.empty_cache()
+#                 del filename
+#                 j = j + 1
 
 
 mask_configs = [ 
@@ -63,17 +63,17 @@ for i in tqdm(range(len(df))):
         name=list(config.keys())[0]
         if j < 50:
             random_data = RandomDataGenerator(
-                path='/home/ec2-user/results/explanations_cough', 
-                model_name='cough',
+                path='/home/ec2-user/results/explanations_nocough', 
+                model_name='nocough',
                 filename=filename,
                 config=config,
                 num_samples=3000, 
             )
             random_data.process_random_file()
             generate_explanation_from_file(filename, 
-                        model_name='cough', 
+                        model_name='nocough', 
                         id_to_explain=1,
                         name=name,
-                        path='/home/ec2-user/results/explanations_cough')
+                        path='/home/ec2-user/results/explanations_nocough')
     j=j+1
             
