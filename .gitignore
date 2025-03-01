@@ -5,3 +5,6 @@ __pycache__/
 audio_analysis.log
 a.ipynb
 *.mp4
+*.wav
+*.json
+
