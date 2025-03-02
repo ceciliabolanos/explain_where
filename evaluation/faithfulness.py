@@ -234,17 +234,17 @@ def main():
     args = parser.parse_args()
 
 
-    # for dataset in ['audioset']:
-    #     for id in [0, 74, 137]:
-    #         for name in ['noise', 'zeros']:
-    #             for method in ['RF', 'LR', 'SHAP']:
-    #                 get_with_name_audioset(method, name, args.base_path, dataset, name, id)
+    for dataset in ['audioset']:
+        for id in [0, 74, 137]:
+            for name in ['noise', 'zeros']:
+                for method in ['RF', 'LR', 'SHAP']:
+                    get_with_name_audioset(method, name, args.base_path, dataset, name, id)
     # , 'cough', 'kws'
-    datasets = ['kws']
-    for dataset in datasets:
-        for name in ['noise', 'zeros']:
-            for method in ['RF', 'LR', 'SHAP']:
-                get_with_name(method, name, args.base_path, dataset, name)
+    # datasets = ['kws']
+    # for dataset in datasets:
+    #     for name in ['noise', 'zeros']:
+    #         for method in ['RF', 'LR', 'SHAP']:
+    #             get_with_name(method, name, args.base_path, dataset, name)
                  
 
    

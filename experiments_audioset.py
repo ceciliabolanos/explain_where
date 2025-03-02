@@ -17,7 +17,7 @@ mask_types = ['noise', 'zeros']
 
 selected_files = pd.read_csv('/home/ec2-user/explain_where/datasets/audioset/audioset.csv')
 
-std = calculate_std('audioset')
+# std = calculate_std('audioset')
 std=0.11 # ya lo habiamos calculado antes
 print(std)
 for mask_type in mask_types:
