@@ -1,9 +1,6 @@
 import numpy as np
-import pandas as pd
-import itertools
 from confidence_intervals.utils import barplot_with_ci
 from collections import OrderedDict
-import matplotlib
 import matplotlib.pyplot as plt
 import sys
 import re, ast
@@ -25,7 +22,7 @@ methods = list(methods_dict.keys())
 names   = list(names_dict.keys())
 
 # datasets = ['drums', 'kws', 'audioset_music', 'audioset_speech', 'audioset_dog']
-datasets = ['drums']
+datasets = ['audioset_dog', 'audioset_music', 'audioset_speech']
 
 fig, axs = plt.subplots(1, len(datasets), figsize=(7,3), sharey=True)
 axs = np.atleast_1d(axs)  # Convert to array if it's not

@@ -2,6 +2,7 @@ import os
 import tempfile
 import subprocess
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import LinearSegmentedColormap
@@ -9,8 +10,9 @@ from matplotlib.animation import FuncAnimation, writers
 import scipy.io.wavfile as wav
 import json
 import pandas as pd
-import ast
 import librosa
+from confidence_intervals import evaluate_with_conf_int
+import re, ast
 
 def calculate_std(dataset):
     stds = []
@@ -103,15 +105,6 @@ def process_importance_values(values, segment_size=100, step_size=100):
     return processed_importance, timeline
 
 def read_and_process_importance_scores(file_path):
-    """
-    Read and process the importance scores JSON file.
-    
-    Args:
-        file_path (str): Path to the JSON file
-        
-    Returns:
-        dict: Processed data with metadata and processed importance scores
-    """
     try:
         # Read JSON file
         with open(file_path, 'r') as f:
@@ -223,6 +216,7 @@ def create_waveform_video_with_importances(waveform, processed_scores, output_fi
         importance_data = []
 
         for key in ['SHAP', 'LR', 'RF']:
+        # for key in ['RF']:
             lime_values = processed_scores[key]['processed_values']
             lime_times = processed_scores[key]['time_points']
             importance_data.append((f'{key}', lime_values, lime_times))
@@ -232,7 +226,7 @@ def create_waveform_video_with_importances(waveform, processed_scores, output_fi
             
             ax.plot(time_points, values, 'k-', linewidth=1, color='black')
             
-            ax.fill_between(time_points, values, 0, alpha=0.2, color='gray')
+            ax.axhline(0, color='black', linewidth=1)       # Draws a horizontal line at y = 0
             
             y_min = min(0, values.min())  # Include 0 in range
             y_max = values.max()
@@ -321,7 +315,6 @@ def create_waveform_video_with_importances(waveform, processed_scores, output_fi
         
         print(f"Final video with audio saved as {output_file}")
 
-
 def create_visualization(waveform, json_file, output_file):
     processed_data = read_and_process_importance_scores(json_file)
     with open(json_file, 'r') as f:
@@ -335,13 +328,6 @@ def create_visualization(waveform, json_file, output_file):
         markers=data['metadata']['true_markers'],
     )
 
-import pandas as pd
-from confidence_intervals import evaluate_with_conf_int
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-import re, ast
-from IPython import embed
 
 def map_metric_name(metric):
 
@@ -359,6 +345,9 @@ def map_metric_name(metric):
     if 'top' in metric:
         metric_name_in_tsv = 'score_curve'
         intersection = ''
+    if 'adapt' in metric:
+        metric_name_in_tsv = 'score_curve'
+        intersection = ''
 
     return value, metric_name_in_tsv, intersection
 
@@ -374,6 +363,32 @@ def clean_and_eval(value):
     except (SyntaxError, ValueError):
         return None  # Handle errors safely
 
+def perc_segments_gt(filename, event_label, dataset):
+    label = int(event_label)
+    if dataset == 'drums':
+        with open(f'/home/ec2-user/results/explanations_drums/{filename}/drums/ft_{label}_noise.json', 'r', encoding='utf-8') as file:
+            data = json.load(file)
+    if 'audioset' in dataset:
+        with open(f'/home/ec2-user/results/explanations_audioset/{filename}/ast/ft_{label}_noise.json', 'r', encoding='utf-8') as file:
+            data = json.load(file)
+    if dataset == 'kws':
+        with open(f'/home/ec2-user/results/explanations_kws/{filename}/kws/ft_{label}_noise.json', 'r', encoding='utf-8') as file:
+            data = json.load(file)
+    time_segments = data['metadata']['true_markers']
+    ms = data['metadata']['segment_length'] / 1000
+    if len(time_segments) ==0:
+        print(filename, event_label)
+    max_time = max(end for _, end in time_segments)
+    fixed_intervals = np.arange(0, max_time + ms, ms)  # Adding 0.1 to include last segment
+
+    # Count segments that overlap with any given time interval
+    count = sum(
+        any(start < t + 0.1 and end > t for start, end in time_segments) 
+        for t in fixed_intervals
+    )
+    total_segments = len(data['importance_scores']['SHAP']['values'])
+
+    return count*100/total_segments
 
 def read_results_file(file_path, metric=None, method=None, name=None, dataset=None):
 
@@ -391,7 +406,8 @@ def read_results_file(file_path, metric=None, method=None, name=None, dataset=No
             # Loop through the rows of df 
             for index, row in df_combination.iterrows():
                 if 'adapt' in metric:
-                    perc = df_combination['event_label'][index] * 0.1
+                    perc = perc_segments_gt(row['filename'], row['event_label'], dataset)/100
+                    print(row['filename'], row['event_label'], perc)
                 else:
                     perc = int(re.sub('perc','',re.sub('top','', metric)))/100
 
@@ -409,7 +425,8 @@ def read_results_file(file_path, metric=None, method=None, name=None, dataset=No
             # Loop through the rows of df 
             for index, row in df_combination.iterrows():
                 if 'adapt' in metric:
-                    perc = df_combination['event_label'][index] * 0.1
+                    perc = perc_segments_gt(row['filename'], row['event_label'], dataset)/100
+                    print(row['filename'], row['event_label'], perc)
                 else:
                     perc = int(re.sub('perc','',re.sub('top','', metric)))/100
                 
@@ -467,7 +484,7 @@ def barplot_with_ci(ax, data, dataset_name, metric, figsize=None, colormap='Spec
     ax.set_xticks(group_starts + barWidth * (len(data)-1)/2 , allgroups)
     if legend == 1 or legend is True:
         ax.legend()
-        ax.set_ylabel(metric)
+        ax.set_ylabel(f'{metric}')
     
 
     if 'AUC' in metric:
