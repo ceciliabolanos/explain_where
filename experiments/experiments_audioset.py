@@ -48,30 +48,35 @@ for mask_type in mask_types:
                             print(f"Error generating explanation for {filename}: {e}")
             
 # mask_configs = [ 
-#     {"zeros": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['zeros'], "combinations": 9}},
-#     {"noise": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['noise'], "combinations": 9}},
+#     {"zeros": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['zeros'], "possible_std_noise": [0],"combinations": 9}},
+#     {"noise_0.1": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['noise'], "possible_std_noise": [0.1], "combinations": 9}},
+#     {"noise_0.5": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['noise'], "possible_std_noise": [0.5], "combinations": 9}},
+#     {"noise_1": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['noise'], "possible_std_noise": [1], "combinations": 9}},
 # ]
+
+samples = [100, 200, 400, 600, 800, 1000, 1500, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 18000]
 
 # for i in tqdm(range(len(selected_files))):
 #     if i < 140:
 #         for config in mask_configs:
-#             filename = selected_files.loc[i]['filename'] 
-#             id = int(selected_files.loc[i]['event_label'])
-#             random_data = RandomDataGenerator(
-#                 path='/home/ec2-user/results/explanations_audioset', 
-#                 model_name='ast',
-#                 filename=filename,
-#                 config=config,
-#                 num_samples=3000, 
-#             )
-#             name=list(config.keys())[0]
-#             random_data.process_random_file()
-#             generate_explanation_from_file(filename, 
-#                         model_name='ast', 
-#                         id_to_explain=id,
-#                         name=name,
-#                         path='/home/ec2-user/results/explanations_audioset')
-#             print('Done')
+#             for sample in samples:
+#                 filename = selected_files.loc[i]['filename'] 
+    #             id = int(selected_files.loc[i]['event_label'])
+    #             random_data = RandomDataGenerator(
+    #                 path='/home/ec2-user/results/explanations_audioset', 
+    #                 model_name='ast',
+    #                 filename=filename,
+    #                 config=config,
+    #                 num_samples=sample, 
+    #             )
+    #             name=list(config.keys())[0]
+    #             random_data.process_random_file()
+    #             generate_explanation_from_file(filename, 
+    #                         model_name='ast', 
+    #                         id_to_explain=id,
+    #                         name=name,
+    #                         path='/home/ec2-user/results/explanations_audioset')
+    #             print('Done')
 
 
 
