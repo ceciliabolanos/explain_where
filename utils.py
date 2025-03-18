@@ -12,7 +12,9 @@ import json
 import pandas as pd
 import librosa
 from confidence_intervals import evaluate_with_conf_int
+from evaluation.auc_relaxed import create_segmentation_vector, generate_sequence
 import re, ast
+from sklearn.metrics import roc_curve, auc
 
 def calculate_std(dataset):
     stds = []
@@ -113,29 +115,26 @@ def read_and_process_importance_scores(file_path):
         # Extract metadata
         metadata = {
             'filename': data['metadata']['filename'],
-            'label_explained': data['metadata']['id_explained']
+            'label_explained': data['metadata']['id_explained'],
+            'segment_length': data['metadata']['segment_length']
         }
         
         # Process importance scores
         processed_scores = {
             'RF': {
                     'method': data['importance_scores']['RF']['method'],
-                    'original_values': np.array(data['importance_scores']['RF']['values'])
+                    'processed_values': np.array(data['importance_scores']['RF']['values'])
             },
             'LR': {
                     'method': data['importance_scores']['LR']['method'],
-                    'original_values': np.array(data['importance_scores']['LR']['values'])
+                    'processed_values': np.array(data['importance_scores']['LR']['values'])
             },
             'SHAP': {
                     'method': data['importance_scores']['SHAP']['method'],
-                    'original_values': np.array(data['importance_scores']['SHAP']['values'])
+                    'processed_values': np.array(data['importance_scores']['SHAP']['values'])
             }
         }
-        
-        for key in ['RF', 'LR', 'SHAP']:
-            processed_scores[key]['processed_values'], processed_scores[key]['time_points'] = \
-                process_importance_values(processed_scores[key]['original_values'])
-        
+    
         return {
             'metadata': metadata,
             'processed_scores': processed_scores
@@ -153,7 +152,38 @@ def read_and_process_importance_scores(file_path):
     except Exception as e:
         print(f"Error: An unexpected error occurred: {e}")
         return None
+
+def calculate_auc(values, segment_length, markers, intersection):
+    overlap = 0  # adjust if necessary
+    granularidad_ms = segment_length - overlap
+    times_gt = markers
+
+    times = generate_sequence(len(values))
     
+    # Create the segmentation vector (labels: 1, -1, or 0)
+    segmentation_labels = create_segmentation_vector(times_gt, times, granularidad_ms, intersection)
+
+    # Filter out segments that are in the discard region (i.e., with label -1).
+    valid_mask = segmentation_labels != -1
+    filtered_segmentation = segmentation_labels[valid_mask]
+    filtered_values = np.array(values)[valid_mask]
+
+    if not (np.any(filtered_segmentation == 1) and np.any(filtered_segmentation == 0)):
+        return None
+
+    # Compute ranking scores.
+    # Here we rank the importance scores: higher scores receive higher ranks.
+    sorted_indices = np.argsort(filtered_values)[::-1]  
+    ranking_scores = np.zeros_like(filtered_values, dtype=float)
+    ranking_scores[sorted_indices] = np.linspace(1, 0, len(filtered_values))
+
+    # Compute ROC curve and AUC using the filtered values.
+    fpr, tpr, thresholds = roc_curve(filtered_segmentation, ranking_scores)
+
+    roc_auc = auc(fpr, tpr)
+
+    return roc_auc
+
 def create_waveform_video_with_importances(waveform, processed_scores, output_file, 
                                          sample_rate=16000, fps=30, markers=None):
     """
@@ -191,7 +221,12 @@ def create_waveform_video_with_importances(waveform, processed_scores, output_fi
         # Create time array
         times = np.arange(len(waveform)) / sample_rate
         total_duration = len(waveform) / sample_rate
+        # Assuming values is the array you are working with
+
         
+        interval_ms = processed_scores['metadata']['segment_length']
+        
+
         # Create segments for LineCollection
         points = np.array([times, waveform]).T.reshape(-1, 1, 2)
         segments = np.concatenate([points[:-1], points[1:]], axis=1)
@@ -214,30 +249,38 @@ def create_waveform_video_with_importances(waveform, processed_scores, output_fi
                                 sharex=True)
         
         importance_data = []
+        methods = ['SHAP', 'LR', 'RF']
+        for key in methods:
+            lime_values = processed_scores['processed_scores'][key]['processed_values']
+            num_segments = len(lime_values)
+            timeline = np.arange(0, num_segments * interval_ms, interval_ms) / 1000  # Time in seconds
+            lime_times = timeline
+            importance_data.append((key, lime_values, lime_times))
 
-        for key in ['SHAP', 'LR', 'RF']:
-        # for key in ['RF']:
-            lime_values = processed_scores[key]['processed_values']
-            lime_times = processed_scores[key]['time_points']
-            importance_data.append((f'{key}', lime_values, lime_times))
-
-        for idx, (title, values, time_points) in enumerate(importance_data):
+        for idx, (method, values, time_points) in enumerate(importance_data):
             ax = axes[idx]
             
-            ax.plot(time_points, values, 'k-', linewidth=1, color='black')
+            # Plot the importance values
+            ax.step(time_points, values, where='post', linewidth=1, color='black')
+            ax.axhline(0, color='black', linewidth=1)
             
-            ax.axhline(0, color='black', linewidth=1)       # Draws a horizontal line at y = 0
-            
-            y_min = min(0, values.min())  # Include 0 in range
+            y_min = min(0, values.min())
             y_max = values.max()
-            padding = (y_max - y_min) * 0.1  # Add 10% padding
-            
-            ax.set_title(title)
+            padding = (y_max - y_min) * 0.1
             ax.set_ylim(y_min - padding, y_max + padding)
             ax.grid(True, alpha=0.3)
             ax.set_ylabel('Importance')
             
-            # Add markers if provided
+            # Compute AUC for the current method using your helper function.
+            # Here, 'data' should be a dict with keys "metadata" and "importance_scores".
+            # Adjust the 'intersection' parameter as needed.
+            roc_auc = calculate_auc(values, interval_ms, markers, intersection=0.09)
+            if roc_auc is not None:
+                title_with_auc = f"{method} (AUC: {roc_auc:.2f})"
+            else:
+                title_with_auc = f"{method} (AUC: N/A)"
+            
+            ax.set_title(title_with_auc)
             if markers:
                 for i, (start, end) in enumerate(markers):
                     # Get color from the list, cycling if needed
@@ -322,7 +365,7 @@ def create_visualization(waveform, json_file, output_file):
 
     create_waveform_video_with_importances(
         waveform=waveform,
-        processed_scores=processed_data['processed_scores'],
+        processed_scores=processed_data,
         output_file=output_file,
         sample_rate=16000,
         markers=data['metadata']['true_markers'],
