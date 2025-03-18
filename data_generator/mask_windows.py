@@ -18,6 +18,7 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                 filename: str = None,
                 id_to_explain: int = None,
                 std_dataset: float = None,
+                std_noise: float = None,
                 path: str = None):
         
         super().__init__(model_name=model_name,
@@ -26,7 +27,8 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                         predict_fn=predict_fn,
                         filename=filename,
                         id_to_explain=id_to_explain,
-                        path=path)
+                        path=path,
+                        std_noise=std_noise)
         self.sr = sample_rate
         self.std = std_dataset
 
@@ -39,6 +41,8 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
         step_samples = mask_samples - overlap_samples
         
         current_pos = 0
+        energy = self.input**2
+        energy_p95 = np.percentile(energy, 95)
         while current_pos < len(self.input):
             masked_audio = np.copy(self.input)
             
@@ -47,9 +51,10 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                 masked_audio[current_pos:end] = 0
 
             elif self.config.mask_type == "noise":
-                noise_std = np.random.uniform(0.1 * self.std, self.std)
-                masked_audio[current_pos:end] = np.random.normal(np.mean(self.input), noise_std, end - current_pos)
-
+               # noise_std = np.random.uniform(0.1 * self.std, self.std)
+               # masked_audio[current_pos:end] = np.random.normal(np.mean(self.input), noise_std, end - current_pos)
+                noise_std =  self.config.std_noise * energy_p95
+                masked_audio[current_pos:end] = np.random.normal(0, np.sqrt(noise_std), end - current_pos)
             elif self.config.mask_type == "stat":
                 fill_value = np.mean(self.input[current_pos:end])
                 masked_audio[current_pos:end] = fill_value 

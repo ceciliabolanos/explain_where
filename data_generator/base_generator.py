@@ -21,7 +21,8 @@ class MaskingConfig:
         overlap: int = 0,
         segment_length: int = 100,
         function: str = 'euclidean',
-        mask_type: str = 'noise'
+        mask_type: str = 'noise',
+        std_noise: float = None
     ):
         self.mask_percentage = mask_percentage
         self.window_size = window_size
@@ -30,6 +31,7 @@ class MaskingConfig:
         self.segment_length = segment_length
         self.function = function
         self.mask_type = mask_type
+        self.std_noise = std_noise
 
 class BaseDataGenerator(ABC):
     def __init__(self, 
@@ -101,7 +103,7 @@ class BaseDataGenerator(ABC):
             }
 
         if self.mode == 'all_masked':
-            output_file = Path(self.path) / filename / self.model_name / f"scores_p{self.config.mask_percentage}_w{self.config.window_size}_f{self.config.function}_m{self.config.mask_type}.json"
+            output_file = Path(self.path) / filename / self.model_name / f"scores_p{self.config.mask_percentage}_w{self.config.window_size}_f{self.config.function}_m{self.config.mask_type}_a{self.config.std_noise}.json"
         else:
             output_file = Path(self.path) / filename / self.model_name / f"scores_w{self.config.window_size}_m{self.config.mask_type}.json"
         
