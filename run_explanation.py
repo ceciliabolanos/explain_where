@@ -21,7 +21,6 @@ def generate_explanation(filename: str,
                   model_name: str, 
                   id_to_explain: int,
                   config: MaskingConfig, 
-                  std_dataset: float,
                   path: str):
     
     if model_name == 'ast':
@@ -64,33 +63,32 @@ def generate_explanation(filename: str,
             predict_fn=predict_fn,
             filename=filename,
             id_to_explain=id_to_explain, 
-            std_dataset=std_dataset, 
             path=path
         )
 
     data_generator.mode = 'all_masked'
-    if not os.path.exists(Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"):
+    if not os.path.exists(Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json"):
         data_generator.generate(filename)
 
     ######### Generate the importances for each method ##########
-    output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"
+    output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json"
 
     if os.path.exists(output_path):
         return 
 
     kernelshap_analyzer = SHAPExplainer(
-        path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json",
+        path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json",
     )
     importances_kernelshap, local_pred = kernelshap_analyzer.get_feature_importances(label_to_explain=id_to_explain)
 
     rf_analyzer = RFExplainer(
-        path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json")
+        path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json")
     
     importances_rf_tree, local_pred = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
 
     # LR analysis
     lr_analyzer = LRExplainer(
-        Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json")
+        Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json")
     
     importances_lr, local_pred  = lr_analyzer.get_feature_importances(label_to_explain=id_to_explain)
     

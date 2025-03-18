@@ -2,7 +2,7 @@ import random
 import json
 from sklearn.ensemble import RandomForestRegressor
 import numpy as np
-import shap 
+# import shap 
 
 SEED = 42
 
@@ -27,15 +27,15 @@ class RFExplainer:
         if method == 'tree':
             importances = RFModel.feature_importances_
         
-        elif method == 'shap':
-            with open(self.path, 'r') as file:
-                data = json.load(file)
-            explainer = shap.TreeExplainer(RFModel)
-            first_snr = np.array(data['snrs'][0])
-            choosen_instance = np.concatenate([first_snr, [data['scores'][0][label_to_explain]]]).reshape(1, -1)
+        # elif method == 'shap':
+        #     with open(self.path, 'r') as file:
+        #         data = json.load(file)
+        #     explainer = shap.TreeExplainer(RFModel)
+        #     first_snr = np.array(data['snrs'][0])
+        #     choosen_instance = np.concatenate([first_snr, [data['scores'][0][label_to_explain]]]).reshape(1, -1)
     
-            shap_values = explainer.shap_values(choosen_instance)
-            importances = shap_values[0]
+        #     shap_values = explainer.shap_values(choosen_instance)
+        #     importances = shap_values[0]
 
         return importances, local_pred
     

@@ -17,8 +17,6 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                 predict_fn: Optional[Callable] = None, 
                 filename: str = None,
                 id_to_explain: int = None,
-                std_dataset: float = None,
-                std_noise: float = None,
                 path: str = None):
         
         super().__init__(model_name=model_name,
@@ -27,10 +25,8 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                         predict_fn=predict_fn,
                         filename=filename,
                         id_to_explain=id_to_explain,
-                        path=path,
-                        std_noise=std_noise)
+                        path=path)
         self.sr = sample_rate
-        self.std = std_dataset
 
     def _generate_naive_masked(self):
         mask_samples = int(self.sr * (self.config.segment_length / 1000))
@@ -96,6 +92,8 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
         
         step = L - O
         output = np.copy(self.input)
+        energy = self.input**2
+        energy_p95 = np.percentile(energy, 95)
 
         for i, (segment, use) in enumerate(zip(W, row)):
             start = i * step
@@ -109,9 +107,11 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                     output[start:end] = 0
 
                 elif self.config.mask_type == "noise":
-                    signal_std = np.std(self.input)
-                    noise_std = np.random.uniform(0.1 * signal_std, signal_std)
-                    output[start:end] = np.random.normal(np.mean(self.input), noise_std, end - start)
+                    # signal_std = np.std(self.input)
+                    # noise_std = np.random.uniform(0.1 * signal_std, signal_std)
+                    # output[start:end] = np.random.normal(np.mean(self.input), noise_std, end - start)
+                    noise_std =  self.config.std_noise * energy_p95
+                    output[start:end] = np.random.normal(0, np.sqrt(noise_std), end - start)
 
                 elif self.config.mask_type == "stat":
                     fill_value = np.mean(self.input)
