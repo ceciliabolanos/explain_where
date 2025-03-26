@@ -132,7 +132,7 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                                                    mask_percentage=self.config.mask_percentage,
                                                    window_size=self.config.window_size)
         
-            scores, neighborhood = self.get_scores_neigh(batch_size=64, snrs=snrs)
+            scores, neighborhood = self.get_scores_neigh(batch_size=256, snrs=snrs)
     
         else:
             output_file = Path(self.path) / filename / self.model_name / f"scores_p{self.config.mask_percentage}_w{self.config.window_size}_feuclidean_m{self.config.mask_type}.json"

@@ -48,7 +48,7 @@ class RandomDataGenerator:
         scores = []
         neighborhood = []
         snrs = []
-
+        # cambiar para que no sea predeterminado
         chosen_file = (
                 Path(self.path) / filename / self.model_name /
                 f"scores_p0.4_w3_feuclidean_mnoise.json"
