@@ -72,24 +72,18 @@ def generate_explanation(filename: str,
 
     ######### Generate the importances for each method ##########
     output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json"
-
+    scores_path = Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json"
     if os.path.exists(output_path):
         return 
 
-    kernelshap_analyzer = SHAPExplainer(
-        path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json",
-    )
+    kernelshap_analyzer = SHAPExplainer(path=scores_path)
     importances_kernelshap, local_pred = kernelshap_analyzer.get_feature_importances(label_to_explain=id_to_explain)
 
-    rf_analyzer = RFExplainer(
-        path= Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json")
-    
+    rf_analyzer = RFExplainer(path=scores_path)
     importances_rf_tree, local_pred = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
 
     # LR analysis
-    lr_analyzer = LRExplainer(
-        Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json")
-    
+    lr_analyzer = LRExplainer(path=scores_path)
     importances_lr, local_pred  = lr_analyzer.get_feature_importances(label_to_explain=id_to_explain)
     
     true_markers = get_segments(complete_filename, id_to_explain, model_name)
@@ -134,6 +128,7 @@ def generate_explanation_from_file(filename: str,
                   model_name: str, 
                   id_to_explain: int,
                   name: str,
+                  num_samples: int,
                   path: str):
     
     if model_name == 'ast':
@@ -160,8 +155,9 @@ def generate_explanation_from_file(filename: str,
        complete_filename = filename
        filename = os.path.basename(filename)
     
-    output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_{name}.json"
-    
+    output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_{name}_samples{num_samples}.json"
+    scores_path = Path(path) / filename / model_name / f"scores_{name}_samples{num_samples}.json"
+
     if os.path.exists(output_path):
         return 
     
@@ -172,20 +168,13 @@ def generate_explanation_from_file(filename: str,
     pred_zeros = predict_fn([np.zeros(len(input))])
     empty_score = pred_zeros[0][id_to_explain]
         
-
-    kernelshap = SHAPExplainer(
-        path= Path(path) / filename / model_name / f"scores_{name}.json",
-    )
+    kernelshap = SHAPExplainer(path=scores_path)
     importances_kernelshap, local_pred = kernelshap.get_feature_importances(label_to_explain=id_to_explain)
 
-    rf_analyzer = RFExplainer(
-        path= Path(path) / filename / model_name / f"scores_{name}.json")
-
+    rf_analyzer = RFExplainer(path=scores_path)
     importances_rf_tree, local_pred = rf_analyzer.get_feature_importances(label_to_explain=id_to_explain, method='tree')
 
-    lime_analyzer = LRExplainer(
-        Path(path) / filename / model_name / f"scores_{name}.json")
-    
+    lime_analyzer = LRExplainer(path=scores_path)
     importances_lr, local_pred = lime_analyzer.get_feature_importances(label_to_explain=id_to_explain)
     
     true_markers = get_segments(complete_filename, id_to_explain, model_name)
