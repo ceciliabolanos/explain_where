@@ -66,7 +66,7 @@ for i in tqdm(range(len(df))):
         for sample in samples:
             filename = df.loc[i, 'filename']
             id = df.loc[i, 'num_kicks']
-            if i < 50:
+            if 40 < i < 50:
                 random_data = RandomDataGenerator(
                     path='/home/ec2-user/results/explanations_drums', 
                     model_name='drums',
