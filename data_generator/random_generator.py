@@ -48,10 +48,9 @@ class RandomDataGenerator:
         scores = []
         neighborhood = []
         snrs = []
-        # cambiar para que no sea predeterminado
-        chosen_file = (
+        chosen_file = ( # use the last combination to get the info of the normal input
                 Path(self.path) / filename / self.model_name /
-                f"scores_p0.4_w3_feuclidean_mnoise.json"
+                f"scores_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_a{std_noise}.json"
             )
         with open(chosen_file, "r") as f:
             data = json.load(f)

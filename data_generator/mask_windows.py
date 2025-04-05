@@ -28,7 +28,7 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                         path=path)
         self.sr = sample_rate
 
-    def _generate_naive_masked(self):
+    def _generate_naive_masked(self): # for masking one window 
         mask_samples = int(self.sr * (self.config.segment_length / 1000))
         windows = self.config.window_size
         overlap_samples = int(self.sr * (self.config.overlap / 1000))
@@ -47,10 +47,11 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                 masked_audio[current_pos:end] = 0
 
             elif self.config.mask_type == "noise":
-               # noise_std = np.random.uniform(0.1 * self.std, self.std)
-               # masked_audio[current_pos:end] = np.random.normal(np.mean(self.input), noise_std, end - current_pos)
+               # noise_std = np.random.uniform(0.1 * self.std, self.std) # PAPER CODE
+               # masked_audio[current_pos:end] = np.random.normal(np.mean(self.input), noise_std, end - current_pos) # PAPER CODE
                 noise_std =  self.config.std_noise * energy_p95
                 masked_audio[current_pos:end] = np.random.normal(0, np.sqrt(noise_std), end - current_pos)
+
             elif self.config.mask_type == "stat":
                 fill_value = np.mean(self.input[current_pos:end])
                 masked_audio[current_pos:end] = fill_value 
@@ -107,9 +108,8 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                     output[start:end] = 0
 
                 elif self.config.mask_type == "noise":
-                    # signal_std = np.std(self.input)
-                    # noise_std = np.random.uniform(0.1 * signal_std, signal_std)
-                    # output[start:end] = np.random.normal(np.mean(self.input), noise_std, end - start)
+                    # noise_std = np.random.uniform(0.1 * self.std, self.std) # PAPER CODE
+                    # masked_audio[current_pos:end] = np.random.normal(np.mean(self.input), noise_std, end - current_pos) # PAPER CODE
                     noise_std =  self.config.std_noise * energy_p95
                     output[start:end] = np.random.normal(0, np.sqrt(noise_std), end - start)
 
@@ -117,6 +117,18 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                     fill_value = np.mean(self.input)
                     output[start:end] = fill_value
 
+                elif self.config.mask_type == "mv_noise":
+                    segment = self.input[start:end] # we use the energy of the window we are masking
+                    energy_mv = np.sum(segment**2)
+                    noise_std =  self.config.std_noise * energy_mv
+                    output[start:end] = np.random.normal(0, np.sqrt(noise_std), end - start)
+                
+                elif self.config.mask_type == "sum_mv_noise":
+                    segment = self.input[start:end] # we use the energy of the window we are masking
+                    energy_mv = np.sum(segment**2)
+                    noise_std =  self.config.std_noise * energy_mv
+                    output[start:end] = segment + np.random.normal(0, np.sqrt(noise_std), end - start)
+                
                 else:
                     raise ValueError("Invalid mask_type. Choose from 'zeros', 'noise', or 'stat'.")
 
@@ -132,7 +144,7 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
                                                    mask_percentage=self.config.mask_percentage,
                                                    window_size=self.config.window_size)
         
-            scores, neighborhood = self.get_scores_neigh(batch_size=256, snrs=snrs)
+            scores, neighborhood = self.get_scores_neigh(batch_size=64, snrs=snrs)
     
         else:
             output_file = Path(self.path) / filename / self.model_name / f"scores_p{self.config.mask_percentage}_w{self.config.window_size}_feuclidean_m{self.config.mask_type}.json"

@@ -36,7 +36,7 @@ class MaskingConfig:
 class BaseDataGenerator(ABC):
     def __init__(self, 
                  model_name,
-                 mode: str = 'naive_masked',
+                 mode: str = 'all_masked',
                  config: MaskingConfig = None,
                  input: Any = None, 
                  predict_fn: Any = None,
@@ -129,7 +129,6 @@ class BaseDataGenerator(ABC):
         
         # Calculate target number of components to mask
         target_masked = int(np.ceil(n_components * mask_percentage))
-        # target_masked = int(np.ceil(n_components * np.random.uniform(0.1, mask_percentage)))
         total_masked = 0
         
         # Generate initial set of random positions
