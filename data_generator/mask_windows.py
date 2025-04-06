@@ -119,7 +119,7 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
 
                 elif self.config.mask_type == "mv_noise":
                     segment = self.input[start:end] # we use the energy of the window we are masking
-                    energy_mv = np.sum(segment**2)
+                    energy_mv = np.percentile(segment**2, 95)
                     noise_std =  self.config.std_noise * energy_mv
                     output[start:end] = np.random.normal(0, np.sqrt(noise_std), end - start)
                 
