@@ -59,15 +59,15 @@ class RandomDataGenerator:
         neighborhood.append(data["neighborhood"][0])
 
         for mask_type, mask_percentage, window_size, function, std_noise in samples:
-            if mask_type == "noise":
-                chosen_file = (
-                    Path(self.path) / filename / self.model_name /
-                    f"scores_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_a{std_noise}.json"
-                )
-            else:
+            if mask_type == "zeros":
                 chosen_file = (
                     Path(self.path) / filename / self.model_name /
                     f"scores_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}.json"
+                )
+            else: # any type of noise
+                chosen_file = (
+                    Path(self.path) / filename / self.model_name /
+                    f"scores_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_a{std_noise}.json"
                 )
 
             with open(chosen_file, "r") as f:
