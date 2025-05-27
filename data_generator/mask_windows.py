@@ -3,7 +3,6 @@ from .base_generator import BaseDataGenerator, MaskingConfig
 import numpy as np
 from typing import Optional, Callable
 from scipy.spatial.distance import euclidean, cosine
-from fastdtw import fastdtw 
 import json
 from pathlib import Path
 
