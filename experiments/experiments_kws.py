@@ -28,7 +28,8 @@ for mask_type in mask_types:
                                         window_size=window_size,
                                         num_samples=NUM_SAMPLES, 
                                         function='euclidean',
-                                        mask_type=mask_type)
+                                        mask_type=mask_type, 
+                                        std_noise=std)
             
             for i in tqdm(range(len(df))):
                 filename = df.loc[i, 'filename']
@@ -39,7 +40,6 @@ for mask_type in mask_types:
                             model_name='kws',
                             id_to_explain=0,
                             config=mask_config,
-                            std_dataset=std,
                             path='/home/ec2-user/results/explanations_kws'
                         )
                     except Exception as e:
@@ -48,29 +48,29 @@ for mask_type in mask_types:
                 torch.cuda.empty_cache()
                 del filename            
 
-mask_configs = [
-    {"zeros": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['zeros'], "combinations": 9}},
-    {"noise": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['noise'], "combinations": 9}},
-]
-j = 0
-for i in tqdm(range(len(df))):
-    for config in mask_configs:
-        filename = df.loc[i, 'filename']
-        if j < 50:
-            random_data = RandomDataGenerator(
-                path='/home/ec2-user/results/explanations_kws', 
-                model_name='kws',
-                filename=filename,
-                config=config,
-                num_samples=NUM_SAMPLES, 
-            )
-            name=list(config.keys())[0]
-            random_data.process_random_file()
-            generate_explanation_from_file(filename, 
-                      model_name='kws', 
-                      id_to_explain=0,
-                      name=name,
-                      path='/home/ec2-user/results/explanations_kws')
-            print('Done')
-    j=j+1
+# mask_configs = [
+#     {"zeros": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['zeros'], "combinations": 9}},
+#     {"noise": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_mask_types": ['noise'], "combinations": 9}},
+# ]
+# j = 0
+# for i in tqdm(range(len(df))):
+#     for config in mask_configs:
+#         filename = df.loc[i, 'filename']
+#         if j < 50:
+#             random_data = RandomDataGenerator(
+#                 path='/home/ec2-user/results/explanations_kws', 
+#                 model_name='kws',
+#                 filename=filename,
+#                 config=config,
+#                 num_samples=NUM_SAMPLES, 
+#             )
+#             name=list(config.keys())[0]
+#             random_data.process_random_file()
+#             generate_explanation_from_file(filename, 
+#                       model_name='kws', 
+#                       id_to_explain=0,
+#                       name=name,
+#                       path='/home/ec2-user/results/explanations_kws')
+#             print('Done')
+#     j=j+1
 
