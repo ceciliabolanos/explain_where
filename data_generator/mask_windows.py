@@ -167,7 +167,6 @@ class WindowMaskingDataGenerator(BaseDataGenerator):
         similarity_functions = {
             "euclidean": euclidean,
             "cosine": cosine,
-            "dtw": lambda x, y: fastdtw(x, y)[0]  # DTW returns (distance, path), we take only distance
         }
 
         # Get the chosen function from config
