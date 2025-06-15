@@ -48,9 +48,16 @@ class RandomDataGenerator:
         scores = []
         neighborhood = []
         snrs = []
-        chosen_file = ( # use the last combination to get the info of the normal input
+        
+        if mask_type == "zeros":
+            chosen_file = ( # use the last combination to get the info of the normal input
                 Path(self.path) / filename / self.model_name /
                 f"scores_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}.json"
+            )
+        else: # any type of noise
+            chosen_file = (
+                Path(self.path) / filename / self.model_name /
+                f"scores_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_a{std_noise}.json"
             )
         with open(chosen_file, "r") as f:
             data = json.load(f)
