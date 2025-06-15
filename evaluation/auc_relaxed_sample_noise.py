@@ -251,41 +251,25 @@ def main():
                       help='Base path for AudioSet experiments')
     args = parser.parse_args()
 
-    names = ["zeros", "noise_0.01", "noise_0.05", "noise_0.1", "noise_0.5", "noise_1"]
+    names = ["zeros", "noise_0.1", "noise_0.5", "noise_1"]
+    datasets =  ['drums']
 
-    # # datasets = ['cough', 'drums', 'kws']
-    # datasets =  ['drums']
     samples = [100, 200, 400, 600, 800, 1000, 1500, 2000, 3000, 4000, 6000, 8000, 10000, 12000, 14000, 18000]
-    # for dataset in datasets:    
-    #     for name in names:
-    #         for n_sample in samples:
-    #             for method in ['SHAP', 'LR', 'RF']:        
-    #                 get_with_name(method, name, n_sample, args.base_path, dataset, 0.09)
+    
+    for dataset in datasets:    
+        for name in names:
+            for n_sample in samples:
+                for method in ['SHAP', 'LR', 'RF']:        
+                    get_with_name(method, name, n_sample, args.base_path, dataset, 0.09)
 
-    # # with granularity
-    # for dataset in datasets:
-    #     for mask_type in ['noise']:
-    #         for mask_percentage in [0.2, 0.3, 0.4]:
-    #             for window_size in [1, 3, 5]:
-    #                 for std_noise in [0.1, 0.5, 1]:
-    #                     for method in ['SHAP', 'LR', 'RF']:
-    #                         get(method, mask_percentage, window_size, mask_type, 'euclidean', std_noise, args.base_path, dataset, 0.09)
-
-    for dataset in ['audioset']:    
-        # for id in [0, 137, 74]:
-        for id in [137]:
-            for name in names:
-                for n_sample in samples:
-                    for method in ['SHAP', 'LR', 'RF']:
-                        get_with_name_audioset(method, name, n_sample, args.base_path, dataset, 0.09, id)
-                    
-    # # with granularity
-    # for id in [0, 137, 74]:
-    #     for mask_type in ['zeros', 'noise']:
-    #         for mask_percentage in [0.2, 0.3, 0.4]:
-    #             for window_size in [1, 3, 5]:
+    # for dataset in ['audioset']:    
+    #     # for id in [0, 137, 74]:
+    #     for id in [137]:
+    #         for name in names:
+    #             for n_sample in samples:
     #                 for method in ['SHAP', 'LR', 'RF']:
-    #                     get_audioset(method, mask_percentage, window_size, mask_type, 'euclidean', args.base_path, 'audioset', 0.09, id)
+    #                     get_with_name_audioset(method, name, n_sample, args.base_path, dataset, 0.09, id)
+                    
     
     
 if __name__ == '__main__':
