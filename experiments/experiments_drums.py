@@ -1,7 +1,6 @@
 import pandas as pd
 from tqdm import tqdm
 import torch
-from utils import calculate_std
 
 from run_explanation import generate_explanation, generate_explanation_from_file
 from data_generator.base_generator import MaskingConfig
@@ -12,13 +11,10 @@ SEGMENT_LENGTH = 100
 NUM_SAMPLES = 3000
 df = pd.read_csv(LABELS_PATH)
 
-
 mask_percentages = [0.2, 0.3, 0.4]
 window_sizes = [3, 5, 1]
-mask_types = ['noise']
+mask_types = ['noise', 'zeros']
 alphas = [0.1, 0.5, 1]
-
-# std = calculate_std('drums')
 
 for mask_type in mask_types:
     for window_size in window_sizes: 
@@ -66,7 +62,7 @@ for i in tqdm(range(len(df))):
         for sample in samples:
             filename = df.loc[i, 'filename']
             id = df.loc[i, 'num_kicks']
-            if 40 < i < 50:
+            if i < 50:
                 random_data = RandomDataGenerator(
                     path='/home/ec2-user/results/explanations_drums', 
                     model_name='drums',
