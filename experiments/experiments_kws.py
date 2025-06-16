@@ -20,37 +20,35 @@ mask_types = ['zeros', 'noise']
 std = 0.06
 print(std)
 
-# for mask_type in mask_types:
-#     for window_size in window_sizes: 
-#         for mask_percentage in mask_percentages:
-#             mask_config = MaskingConfig(segment_length=SEGMENT_LENGTH, 
-#                                         mask_percentage=mask_percentage, 
-#                                         window_size=window_size,
-#                                         num_samples=NUM_SAMPLES, 
-#                                         function='euclidean',
-#                                         mask_type=mask_type, 
-#                                         std_noise=std)
+for mask_type in mask_types:
+    for window_size in window_sizes: 
+        for mask_percentage in mask_percentages:
+            mask_config = MaskingConfig(segment_length=SEGMENT_LENGTH, 
+                                        mask_percentage=mask_percentage, 
+                                        window_size=window_size,
+                                        num_samples=NUM_SAMPLES, 
+                                        function='euclidean',
+                                        mask_type=mask_type, 
+                                        std_noise=std)
             
-#             for i in tqdm(range(len(df))):
-#                 filename = df.loc[i, 'filename']
-#                 if i < 50:
-#                     try:
-#                         generate_explanation(
-#                             filename=filename,
-#                             model_name='kws',
-#                             id_to_explain=0,
-#                             config=mask_config,
-#                             path='/home/ec2-user/results/explanations_kws'
-#                         )
-#                     except Exception as e:
-#                         print(f"Error generating explanation for {filename}: {e}")
+            for i in tqdm(range(len(df))):
+                filename = df.loc[i, 'filename']
+                if i < 50:
+                    try:
+                        generate_explanation(
+                            filename=filename,
+                            model_name='kws',
+                            id_to_explain=0,
+                            config=mask_config,
+                            path='/home/ec2-user/results/explanations_kws'
+                        )
+                    except Exception as e:
+                        print(f"Error generating explanation for {filename}: {e}")
             
-#                 torch.cuda.empty_cache()
-#                 del filename            
+                torch.cuda.empty_cache()
+                del filename            
 
 samples = [100, 200, 400, 600, 800, 1000, 1500, 2000, 3000, 4000, 6000, 8000, 10000, 12000, 14000, 18000]
-
-# samples = [3000]
 mask_configs = [
     {"zeros": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5],"possible_std_noise": [0.06], "possible_mask_types": ['zeros'], "combinations": 9}},
     {"noise": {"mask_percentage": [0.2, 0.3, 0.4], "possible_windows": [1,3,5], "possible_std_noise": [0.06], "possible_mask_types": ['noise'], "combinations": 9}},
