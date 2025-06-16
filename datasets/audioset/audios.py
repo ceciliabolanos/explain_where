@@ -7,8 +7,8 @@ import soundfile as sf
 import torch
 from transformers import AutoFeatureExtractor, ASTForAudioClassification
 from scipy.signal import resample
-import tensorflow as tf
-import tensorflow_hub as hub
+# import tensorflow as tf
+# import tensorflow_hub as hub
 
 df = pd.read_csv('/home/ec2-user/Datasets/Audioset/labels/audioset_eval.csv')
 
@@ -35,7 +35,7 @@ def predict_with_ast(filename, label):
 
 
 # Process predictions
-df['score_ast'] = df.progress_apply(
+df['score_ast'] = df.apply(
     lambda row: predict_with_ast(row['base_segment_id'], row['father_id_ast']),
     axis=1
 )
