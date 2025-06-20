@@ -105,7 +105,7 @@ class BaseDataGenerator(ABC):
         if self.mode == 'all_masked':
             if self.config.mask_type == 'zeros':
                 output_file = Path(self.path) / filename / self.model_name / f"scores_p{self.config.mask_percentage}_w{self.config.window_size}_f{self.config.function}_m{self.config.mask_type}.json"
-            elif self.config.mask_type == 'noise':
+            elif 'noise' in self.config.mask_type:
                 output_file = Path(self.path) / filename / self.model_name / f"scores_p{self.config.mask_percentage}_w{self.config.window_size}_f{self.config.function}_m{self.config.mask_type}_a{self.config.std_noise}.json"
         else:
             output_file = Path(self.path) / filename / self.model_name / f"scores_w{self.config.window_size}_m{self.config.mask_type}.json"
