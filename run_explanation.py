@@ -67,13 +67,23 @@ def generate_explanation(filename: str,
         )
 
     data_generator.mode = 'all_masked'
-    if not os.path.exists(Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json"):
-        data_generator.generate(filename)
+    if config.mask_type == 'zeros':
+       if not os.path.exists(Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"):
+            data_generator.generate(filename)
+    else:
+        if not os.path.exists(Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json"):
+            data_generator.generate(filename)
 
     ######### Generate the importances for each method ##########
-    output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json"
-    scores_path = Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json"
-    if os.path.exists(output_path):
+    if config.mask_type == 'zeros':
+        output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"
+        scores_path = Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}.json"
+    else:
+        output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json"
+        scores_path = Path(path) / filename / model_name / f"scores_p{config.mask_percentage}_w{config.window_size}_f{config.function}_m{config.mask_type}_a{config.std_noise}.json"
+
+    if not os.path.exists(output_path):
+    # if  os.path.exists(output_path): comento para que no genere la explicacion ahora. Ahora no estamos queriendo el resultado de los hiperparams
         return 
 
     kernelshap_analyzer = SHAPExplainer(path=scores_path)
