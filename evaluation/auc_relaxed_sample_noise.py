@@ -124,70 +124,6 @@ def process_audio_file(data, method, intersection):
     }
 
 
-def get(method: str, mask_percentage, window_size, mask_type, function, std_noise, base_path: str, dataset, intersection):
-    results = []
-    
-    for root, _, files in tqdm(os.walk(os.path.join(base_path, f'explanations_{dataset}'))):
-        if mask_type == 'noise':
-            pattern = re.compile(rf'ft_.*_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_a{std_noise}\.json$')
-        else:
-            pattern = re.compile(rf'ft_.*_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}\.json$')
-        json_files = [f for f in files if pattern.match(f)]
-        
-        for json_file in json_files:
-            file_path = os.path.join(root, json_file)
-            try:
-                with open(file_path, "r") as file:
-                    data = json.load(file)
-            except json.JSONDecodeError as e:
-                print(f"JSON error: {e}. Retrying {file_path}")
-           
-            result = process_audio_file(data, method, intersection)
-            results.append(result)
-        
-    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
-    os.makedirs(output_dir, exist_ok=True)
-    
-    pred_df = pd.DataFrame(results)
-    pred_df.to_csv(os.path.join(output_dir, f'auc_relaxed_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_a{std_noise}_{intersection}.tsv'), sep='\t', index=False)
-
-
-def get_audioset(method: str, mask_percentage, window_size, mask_type, function, std_noise, base_path: str, dataset, intersection, id):
-    results = []
-    selected_files = pd.read_csv('/home/ec2-user/explain_where/datasets/audioset/audioset.csv')
-
-    for i in tqdm(range(len(selected_files))):
-        id1 = int(selected_files.loc[i]['event_label'])
-        filename = selected_files.loc[i]['filename']
-        if mask_type == 'noise':
-            file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft_{id1}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_a{std_noise}.json'
-        else:
-            file_path = f'{base_path}/explanations_{dataset}/{filename}/ast/ft_{id1}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}.json'
-
-        if os.path.exists(file_path):
-            if id1 == id:
-                try:
-                    with open(file_path, "r") as file:
-                        data = json.load(file)
-                    result = process_audio_file(data, method, intersection)
-                except json.JSONDecodeError as e:
-                        print(f"JSON error: {e}. Skipping {file_path}")
-                        result = None  # Append None in case of JSON error
-                results.append(result)
-    
-    if id == 0:
-        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_speech/')
-    if id == 137:
-        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_music/')
-    if id == 74:
-        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_dog/')
-    os.makedirs(output_dir, exist_ok=True)
-
-    results = [r for r in results if r is not None]    
-    pred_df = pd.DataFrame(results)
-    pred_df.to_csv(os.path.join(output_dir, f'auc_relaxed_{method}_p{mask_percentage}_w{window_size}_f{function}_m{mask_type}_a{std_noise}_{intersection}.tsv'), sep='\t', index=False)
-
-
 def get_with_name_audioset(method: str, name, n_sample, base_path: str, dataset, intersection, id):
     results = []
     selected_files = pd.read_csv('/home/ec2-user/explain_where/datasets/audioset/audioset.csv')
@@ -207,11 +143,11 @@ def get_with_name_audioset(method: str, name, n_sample, base_path: str, dataset,
                 results.append(result)
            
     if id == 0:
-        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_speech/')
+        output_dir = os.path.join(f'/home/ec2-user/evaluations_sample_noise/{dataset}_speech/')
     if id == 137:
-        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_music/')
+        output_dir = os.path.join(f'/home/ec2-user/evaluations_sample_noise/{dataset}_music/')
     if id == 74:
-        output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}_dog/')
+        output_dir = os.path.join(f'/home/ec2-user/evaluations_sample_noise/{dataset}_dog/')
     os.makedirs(output_dir, exist_ok=True)
 
     results = [r for r in results if r is not None]
@@ -238,7 +174,7 @@ def get_with_name(method: str, name, n_sample, base_path: str, dataset, intersec
             results.append(result)
        
         
-    output_dir = os.path.join(f'/home/ec2-user/evaluations/{dataset}/')
+    output_dir = os.path.join(f'/home/ec2-user/evaluations_sample_noise/{dataset}/')
     os.makedirs(output_dir, exist_ok=True)
     
     pred_df = pd.DataFrame(results)
@@ -247,28 +183,30 @@ def get_with_name(method: str, name, n_sample, base_path: str, dataset, intersec
 def main():
     parser = argparse.ArgumentParser(description='Process AudioSet data and generate evaluation files.')
     parser.add_argument('--base_path', type=str,
-                      default='/home/ec2-user/results',
+                      default='/home/ec2-user/explanations',
                       help='Base path for AudioSet experiments')
     args = parser.parse_args()
 
-    names = ["zeros", "noise_0.1", "noise_0.5", "noise_1"]
-    datasets =  ['drums']
-
-    samples = [100, 200, 400, 600, 800, 1000, 1500, 2000, 3000, 4000, 6000, 8000, 10000, 12000, 14000, 18000]
+    samples = [100, 200, 400, 600, 800, 1000, 1500, 2000, 3000, 4000, 6000, 8000, 10000, 12000, 14000]
     
-    for dataset in datasets:    
-        for name in names:
+    for dataset in ['drums']:    
+        for name in ["zeros", "noise_0.1", "noise_0.5", "noise_1"]:
+            for n_sample in samples:
+                for method in ['SHAP', 'LR', 'RF']:        
+                    get_with_name(method, name, n_sample, args.base_path, dataset, 0.09)
+    
+    for dataset in ['kws']:    
+        for name in ["zeros", "noise"]:
             for n_sample in samples:
                 for method in ['SHAP', 'LR', 'RF']:        
                     get_with_name(method, name, n_sample, args.base_path, dataset, 0.09)
 
-    # for dataset in ['audioset']:    
-    #     # for id in [0, 137, 74]:
-    #     for id in [137]:
-    #         for name in names:
-    #             for n_sample in samples:
-    #                 for method in ['SHAP', 'LR', 'RF']:
-    #                     get_with_name_audioset(method, name, n_sample, args.base_path, dataset, 0.09, id)
+    for dataset in ['audioset']:    
+        for id in [0, 137, 74]:
+            for name in ["zeros", "noise_0.01", "noise_0.05", "noise_0.1", "mv_noise_0.01", "mv_noise_0.05", "mv_noise_0.1"]:
+                for n_sample in samples:
+                    for method in ['SHAP', 'LR', 'RF']:
+                        get_with_name_audioset(method, name, n_sample, args.base_path, dataset, 0.09, id)
                     
     
     

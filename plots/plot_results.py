@@ -2,7 +2,7 @@ import numpy as np
 from confidence_intervals.utils import barplot_with_ci
 from collections import OrderedDict
 import matplotlib.pyplot as plt
-from utils import barplot_with_ci, read_results_file, mean_with_confint, map_metric_name
+from utils import read_results_file, mean_with_confint, map_metric_name
 
 metric = 'auc_relaxed'
 outfile = 'auc_replicate_results.png'
