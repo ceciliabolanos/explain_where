@@ -11,8 +11,12 @@ class ASTModel(Model):
         self.filename = filename
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.feature_extractor = AutoFeatureExtractor.from_pretrained("MIT/ast-finetuned-audioset-10-10-0.4593")
-        self.model = ASTForAudioClassification.from_pretrained("MIT/ast-finetuned-audioset-10-10-0.4593")
+
+        model_id = "MIT/ast-finetuned-audioset-10-10-0.4593"
+
+        self.feature_extractor = AutoFeatureExtractor.from_pretrained(model_id, local_files_only=True)
+        self.model = ASTForAudioClassification.from_pretrained(model_id, local_files_only=True)
+        
         self.model.to(self.device)
         self.model.eval()
 
