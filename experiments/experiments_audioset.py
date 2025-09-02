@@ -13,7 +13,7 @@ df = pd.read_csv(LABELS_PATH)
 # Hyperparameters
 mask_percentages = [0.2, 0.3, 0.4]
 window_sizes = [3, 5, 1]
-mask_types = ['noise','mv_noise', 'zeros']
+mask_types = ['noise', 'zeros', 'mv_noise']
 alphas = [0.01, 0.05, 0.1]
 selected_files = pd.read_csv('/home/ec2-user/explain_where/datasets/audioset/audioset.csv')
 
@@ -43,7 +43,7 @@ for mask_type in mask_types:
                                 model_name='ast',
                                 id_to_explain=id,
                                 config=mask_config,
-                                path='/home/ec2-user/results/explanations_audioset'
+                                path='/home/ec2-user/explanations/explanations_audioset'
                             )
                         except Exception as e:
                             print(f"Error generating explanation for {filename}: {e}")
@@ -72,7 +72,7 @@ for i in tqdm(range(len(selected_files))):
         for config in mask_configs:
             for sample in samples:
                 random_data = RandomDataGenerator(
-                    path='/home/ec2-user/results/explanations_audioset', 
+                    path='/home/ec2-user/explanations/explanations_audioset', 
                     model_name='ast',
                     filename=filename,
                     config=config,
@@ -85,7 +85,7 @@ for i in tqdm(range(len(selected_files))):
                             id_to_explain=id,
                             name=name,
                             num_samples=sample, 
-                            path='/home/ec2-user/results/explanations_audioset')
+                            path='/home/ec2-user/explanations/explanations_audioset')
                 print('Done')
 
 
