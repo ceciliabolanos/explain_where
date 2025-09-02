@@ -239,25 +239,25 @@ def get_with_name(method: str, name, base_path: str, dataset, intersection):
 def main():
     parser = argparse.ArgumentParser(description='Process AudioSet data and generate evaluation files.')
     parser.add_argument('--base_path', type=str,
-                      default='/home/ec2-user/results',
+                      default='/home/ec2-user/explanations',
                       help='Base path for AudioSet experiments')
     args = parser.parse_args()
 
     names = ["zeros", "noise"]
 
     # # datasets = ['cough', 'drums', 'kws']
-    # datasets =  ['nocough']
-    # for dataset in datasets:    
-    #     for name in names:
-    #         for method in ['SHAP', 'LR', 'RF']:        
-    #             get_with_name(method, name, args.base_path, dataset, 0.09)
+    datasets =  ['drums', 'kws']
+    for dataset in datasets:    
+        for name in names:
+            for method in ['SHAP', 'LR', 'RF']:        
+                get_with_name(method, name, args.base_path, dataset, 0.09)
                 
-    # for dataset in datasets:
-    #     for mask_type in ['zeros', 'noise']:
-    #         for mask_percentage in [0.2, 0.3, 0.4]:
-    #             for window_size in [1, 3, 5]:
-    #                 for method in ['SHAP', 'LR', 'RF']:
-    #                     get(method, mask_percentage, window_size, mask_type, 'euclidean', args.base_path, dataset, 0.09)
+    for dataset in datasets:
+        for mask_type in ['zeros', 'noise']:
+            for mask_percentage in [0.2, 0.3, 0.4]:
+                for window_size in [1, 3, 5]:
+                    for method in ['SHAP', 'LR', 'RF']:
+                        get(method, mask_percentage, window_size, mask_type, 'euclidean', args.base_path, dataset, 0.09)
 
     for dataset in ['audioset']:    
         for id in [0, 137, 74]:
