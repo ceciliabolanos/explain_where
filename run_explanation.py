@@ -159,15 +159,17 @@ def generate_explanation_from_file(filename: str,
        model = DrumsModel(filename, id_to_explain) 
        complete_filename = filename
        filename = os.path.basename(filename)
-    
-    if model_name == 'kws':
-       model = KWSModel(filename, id_to_explain) 
-       complete_filename = filename
-       filename = os.path.basename(filename)
-    
     output_path = Path(path) / filename / model_name / f"ft_{id_to_explain}_{name}_samples{num_samples}.json"
     scores_path = Path(path) / filename / model_name / f"scores_{name}_samples{num_samples}.json"
 
+    if model_name in ['kws', 'kws_fp', 'kws_fn']:
+       model = KWSModel(filename, id_to_explain) 
+       complete_filename = filename
+       filename = os.path.basename(filename)
+       output_path = Path(path) / filename / "kws" / f"ft_{id_to_explain}_{name}_samples{num_samples}.json"
+       scores_path = Path(path) / filename / "kws" / f"scores_{name}_samples{num_samples}.json"
+
+   
     if os.path.exists(output_path):
         return 
     

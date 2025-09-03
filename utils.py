@@ -71,6 +71,12 @@ def get_segments(base_segment_id, label, model):
 
     if model == 'kws':
         df = pd.read_csv("/home/ec2-user/explain_where/datasets/kws/kws_dataset.csv")
+    elif model == 'kws_fp':
+        df = pd.read_csv("/home/ec2-user/explain_where/datasets/kws/kws_fp_dataset.csv")
+    elif model == 'kws_fn':
+        df = pd.read_csv("/home/ec2-user/explain_where/datasets/kws/kws_fn_dataset.csv")
+
+    if model in ['kws', 'kws_fp', 'kws_fn']:
         filtered_df = df[df['filename'] == base_segment_id]
         filtered_df = filtered_df.reset_index(drop=True)
         segment_lists = [[filtered_df['word_start'].loc[0], filtered_df['word_end'].loc[0]]]
